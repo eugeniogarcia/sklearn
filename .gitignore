@@ -4,3 +4,5 @@
 *.npz
 *.csv
 images
+spam
+easy_ham
