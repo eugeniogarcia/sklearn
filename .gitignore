@@ -1,2 +1,6 @@
 .ipynb_checkpoints/*
 *.png
+*.npy
+*.npz
+*.csv
+images
