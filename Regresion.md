@@ -7,6 +7,7 @@ Algoritmos de aprendizaje supervisado:
 - Support Vector Machines (SVMs)
 - Decision Trees and Random Forests
 - Neural networks
+
 # Regresion
 
 ## Linear Regression
