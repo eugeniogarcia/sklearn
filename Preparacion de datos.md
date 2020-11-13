@@ -242,6 +242,26 @@ housing_extra_attribs = attr_adder.transform(housing.values)
 
 ### Ejemplo 2
 
+Esta transformación se encarga de rellenar datos vacios en series categoricas. Lo que hacemos es rellenar aquellos campos vacios con la categoría que sea más frecuente.
+
+```py
+# Inspired from stackoverflow.com/questions/25239958
+class MostFrequentImputer(BaseEstimator, TransformerMixin):
+    #Tiene como argumento un dataframe.
+    def fit(self, X, y=None):
+        #Calcula una serie
+        #La serie tiene como indice los nombres de las columnas del dataframe
+        #y como valor una colección con el nombre de la categoría más popular, la que tiene el contador más elevado 
+        #tenemos la categoria que es más frecuente
+        self.most_frequent_ = pd.Series([X[c].value_counts().index[0] for c in X],index=X.columns)
+        return self
+		
+    def transform(self, X, y=None):
+        #Transformamos el dataframe, de modo que en cada columna rellenamos los valores no informados, 
+        #con la categoría más frecuente
+        return X.fillna(self.most_frequent_)
+```
+
 ### Ejemplo 3
 
 Creamos un clasificador binario que clasifica al azar, siempre retorna un 0:

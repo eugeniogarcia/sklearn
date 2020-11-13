@@ -5,6 +5,7 @@ Podemos evaluar la calidad del modelo usando diferentes métricas:
 - mean_squared_error
 - mean_absolute_error
 - cross_val_score
+- Confusion Matrix (Clasificación Binaria)
 
 ## mean_squared_error
 
