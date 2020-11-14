@@ -1,18 +1,10 @@
-# Algoritmos
-
-Algoritmos de aprendizaje supervisado:
-- k-Nearest Neighbors
-- Linear Regression
-- Logistic Regression
-- Support Vector Machines (SVMs)
-- Decision Trees and Random Forests
-- Neural networks
-
 # Regresion
 
 ## Linear Regression
 
 Calcula la regresión lineal utilizando la formula matemática.
+
+- __fit_intercept__. Por defecto True. Determina si se calculara el término independiente o no
 
 ```py
 from sklearn.linear_model import LinearRegression
@@ -42,6 +34,8 @@ array([[4.21509616],[9.75532293]])
 - La estimación es __lineal__
 
 ### Regularización
+
+Para evitar el overfit una técnica habitual es limitar la norma de los pesos, tratar que los pesos sean lo más pequeños posible. 
 
 #### Ridge (Norma 2)
 
@@ -83,40 +77,38 @@ elastic_net.predict(X_new)
 
 Aplica gradient descent, pero en lugar de aplicarlo sobre todos los datos de entrenamiento, lo que hace el algoritmo es elegir uno al azar, y actualizar los pesos con este dato.
 
-Comportamiento estocastico:
+Se configura con los siguientes parámetros:
 
-- __shuffle__. Indica si los datos deben barajarse en cada epoch. Por defecto es True
-- __random_state__. Semilla para el generador de números aleatorios. Por defecto es None. Es un valor entero
-
-función de error:
-
-- __lossstr__. función de error a optimizar. Por defecto es 'squared_loss'. Otras opciones son:
-	- 'squared_loss'
-	- 'huber'. modifica 'squared_loss' para fozalizarse menos en los outliers. Cuando la distancia supera un determinado valor, epsilon, en lugar de usar norma 2, cuadrática, usara norma 1
-	- 'epsilon_insensitive'. Ignora aquellos errores que sean menores que epsilon, y usa una norma 1 para los errores que sean mayores que epsilon
-	- 'squared_epsilon_insensitive'. Ignora aquellos errores que sean menores que epsilon, y usa una norma 2 para los errores que sean mayores que epsilon
-- __epsilon__. El valor de epsilon. Por defecto es 0.1
-- __penalty__. Regularización a utilizar. Por defecto se usa _l2_
-	- 'l2'
-	- 'l1'
-	- 'elasticnet'
-- __alpha__. Factor a aplicar al termino de regularización, o _penalty_. Por defecto es 0.0001
-- __l1_ratio__. Se usa en Elastic Net. Por defecto es 0.15.  0 <= l1_ratio <= 1. l1_ratio=0 corresponderá a l2 penalty, l1_ratio=1 a l1.
-- __fit_intercept__. Indica si debe estimarse el termino constante, el bias, o no. Por defecto es True, se estima
-
-Aprendizaje:
-
-- __max_iter__. número máximo de iteraciones
-- __learning_rate__. Define como actualizar la learning rate. Por defecto es invscaling.
-	- 'constant': Constante. eta = eta0
-	- 'optimal': eta = 1.0 / (alpha * (t + t0)) where t0 is chosen by a heuristic proposed by Leon Bottou.
-	- 'invscaling': eta = eta0 / pow(t, power_t)
-	- 'adaptive': eta = eta0, mientras el error vaya disminuyendo . Si durante _n_iter_no_change_ epochs consecutivas no se decrementa el error, o no lo hace por encima de la tolerancia, _tol_, y _early_stopping_ es True, divide la tasa actual de aprendizaje por cinco
-- __eta0__. Learning rate de partida
-- __tol__. Tolerancia. Por debajo de este error, el algoritmo se detiene
-- __early_stopping__. Por defecto es False. Si no cambia el error durante _n_iter_no_change epochs, detiene el aprendizaje
-- __n_iter_no_change__. Paciencia del algoritmo. Por defecto es 5
-- __validation_fraction__. Por defecto 0.1. Proporción de los datos que se apartarán para validar el error en el caso de _early stopping_. Solo se usa si _early_stopping_ es True
+- Comportamiento estocastico:
+	- __shuffle__. Indica si los datos deben barajarse en cada epoch. Por defecto es True
+	- __random_state__. Semilla para el generador de números aleatorios. Por defecto es None. Es un valor entero
+- Función de error:
+	- __loss__. función de error a optimizar. Por defecto es 'squared_loss'. Otras opciones son:
+		- 'squared_loss'
+		- 'huber'. modifica 'squared_loss' para fozalizarse menos en los outliers. Cuando la distancia supera un determinado valor, epsilon, en lugar de usar norma 2, cuadrática, usara norma 1
+		- 'epsilon_insensitive'. Ignora aquellos errores que sean menores que epsilon, y usa una norma 1 para los errores que sean mayores que epsilon
+		- 'squared_epsilon_insensitive'. Ignora aquellos errores que sean menores que epsilon, y usa una norma 2 para los errores que sean mayores que epsilon
+	- __epsilon__. El valor de epsilon. Por defecto es 0.1
+	- __penalty__. Regularización a utilizar. Por defecto se usa _l2_
+		- 'l2'
+		- 'l1'
+		- 'elasticnet'
+	- __alpha__. Factor a aplicar al termino de regularización, o _penalty_. Por defecto es 0.0001
+	- __l1_ratio__. Se usa en Elastic Net. Por defecto es 0.15.  0 <= l1_ratio <= 1. l1_ratio=0 corresponderá a l2 penalty, l1_ratio=1 a l1.
+	- __fit_intercept__. Indica si debe estimarse el termino constante, el bias, o no. Por defecto es True, se estima
+- Aprendizaje:
+	- __max_iter__. número máximo de iteraciones
+	- __learning_rate__. Define como actualizar la learning rate. Por defecto es invscaling.
+		- 'constant': Constante. eta = eta0
+		- 'optimal': eta = 1.0 / (alpha * (t + t0)) where t0 is chosen by a heuristic proposed by Leon Bottou.
+		- 'invscaling': eta = eta0 / pow(t, power_t)
+		- 'adaptive': eta = eta0, mientras el error vaya disminuyendo . Si durante _n_iter_no_change_ epochs consecutivas no se decrementa el error, o no lo hace por encima de la tolerancia, _tol_, y _early_stopping_ es True, divide la tasa actual de aprendizaje por cinco
+	- __eta0__. Learning rate de partida
+	- __power_tdouble__. Por defecto 0.5. Exponente usado en inverse scaling.
+	- __tol__. Tolerancia. Por debajo de este error, el algoritmo se detiene
+	- __early_stopping__. Por defecto es False. Si no cambia el error durante _n_iter_no_change epochs, detiene el aprendizaje
+	- __n_iter_no_change__. Paciencia del algoritmo. Por defecto es 5
+	- __validation_fraction__. Por defecto 0.1. Proporción de los datos que se apartarán para validar el error en el caso de _early stopping_. Solo se usa si _early_stopping_ es True
 
 ```py
 from sklearn.linear_model import SGDRegressor

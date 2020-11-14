@@ -1,31 +1,16 @@
-# Algoritmos
-
-No supervisado:
-- Clustering
-	- K-Means
-	- DBSCAN
-	- Hierarchical Cluster Analysis (HCA)
-- Anomaly detection and novelty detection
-	- One-class SVM
-	- Isolation Forest
-- Visualization and dimensionality reduction
-	- Principal Component Analysis (PCA)
-	- Kernel PCA
-	- Locally-Linear Embedding (LLE)
-	- t-distributed Stochastic Neighbor Embedding (t-SNE)
-- Association rule learning
-	- Apriori
-	- Eclat
-
 # Clasificadores
 
 ## Logistic Regression (binario y multi-class)
 
 Usamos este método para clasificar. Por un lado el modelo que vamos a estimar aplica una función de activación, la __Logistic function__ _( 1/(1+e^-x)_ al resultado del modelo lineal.
 
-La función de coste es la __log loss__ _(-y*log(p)-(1-y)*log(1-p))_.
+El algoritmo se puede usar en problemas de clasificación binaría y en multi-class. En caso de que la clasificación sea binaria, la función de coste es la __log loss__ _(-y*log(p)-(1-y)*log(1-p))_.
 
-El modelo admite varios parámetros:
+En problemas de clasificación multi-clases, se podrán configurar dos estrategías diferentes, según lo que se informe en el parámetro _multi_class_:
+- 'ovr'. Se utiliza la estrategia __OvR__, "One vs Rest"
+- 'multinomial'. Se utiliza como función de coste la __cross-entropia__. 'multinomial' solo se soporta con los algoritmos 'lbfgs', 'sag', 'saga' y 'newton-cg'
+
+No hay una solución matemática que resuelva este problema de optimización, así que se utiliza Batch Gradient Descent para resolverlo. El modelo admite varios parámetros:
 
 - __solver__. Algoritmo de optimización, Puede ser 'newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga'. Por defecto 'lbfgs'. 
 	- Si el dataset es pequeño, 'liblinear' es una buena elección. 'sag' y 'saga' son más rápidos en datasets grandes.
@@ -49,6 +34,8 @@ El modelo admite varios parámetros:
 	- 'ovr'. Se crea un modelo binario por cada etiqueta. 
 	- 'multinomial'. Usamos softmax para determinar la probabilidad en cada una de las clases. 'multinomial' no esta disponible cuando el algoritmo es 'liblinear'. 'auto' selecciona 'ovr' si los datos son binarios, o el algoritmo es 'liblinear'. En caso contratrio se usara 'multinomial'.
 
+Los algoritmos 'newton-cg', 'sag', y 'lbfgs' admiten solo la regularización 'l2' - o trabajar sin regularización. El algoritmo 'liblinear' admite tanto 'l1' como 'l2'.Elastic-Net solo se admite con el algoritmo 'saga'.
+
 ### Clasificación Binaria
 
 Notese que el método es __predict_proba__. Usamos los valores por defecto
@@ -61,6 +48,9 @@ log_reg = LogisticRegression()
 log_reg.fit(X, y)
 
 log_reg.predict_proba(X)
+
+#Clases disponibles
+log_reg.classes_
 ```
 
 ### Multi-class (softmax)
@@ -76,9 +66,73 @@ log_reg.fit(X, y)
 
 log_reg.predict_proba(X)
 array([[6.38014896e-07, 5.74929995e-02, 9.42506362e-01]])
+
+#Clases disponibles
+log_reg.classes_
+```
+
+### Multi-class (ovr)
+
+Notese que el método es __predict_proba__. Como _y_ tiene varias clases, y no especificamos nada en _multinomial_, aplicará el valor por defecto, 'ovr':
+
+```py
+from sklearn.linear_model import LogisticRegression
+
+softmax_reg = LogisticRegression(C=10)
+
+log_reg.fit(X, y)
+
+log_reg.predict_proba(X)
+array([[6.38014896e-07, 5.74929995e-02, 9.42506362e-01]])
+
+#Clases disponibles
+log_reg.classes_
 ```
 
 ## Stocastic Gradient Descent (binario y multi-class)
+
+Por defecto utiliza una función de coste __hinge__, _y = max(0, 1-t * y)_, para definir el clasificador.
+
+Se configura con los siguientes parámetros:
+
+- Comportamiento estocastico:
+	- __shuffle__. Indica si los datos deben barajarse en cada epoch. Por defecto es True
+	- __random_state__. Semilla para el generador de números aleatorios. Por defecto es None. Es un valor entero
+
+- Función de error:
+	- __loss__. función de error a optimizar. Por defecto es 'hinge'. Otras opciones son:
+		- 'hinge'
+		- 'log'. Usa Logistic regresion
+		- 'modified_huber'. Ofrece una función de coste probabilistica al tiempo que es robusta frente a outliers
+		- 'squared_hinge'. Como hinge, pero la penalización es cuadrática
+		- 'perceptron'
+		- A regression loss. Estas funciones estan diseñadas para hacer regresión, pero pueden ser útiles en algunos casos de clasificación:
+			- 'squared_loss'
+			- 'huber'. Es una función cuadratica para errores menores a un umbral, y lineal para errores mayores
+			- 'epsilon_insensitive'
+			- 'squared_epsilon_insensitive'
+	- __epsilon__. El valor de epsilon. Por defecto es 0.1. Se utiliza en 'huber', 'epsilon_insensitive', y 'squared_epsilon_insensitive'. En el caso de 'huber', determina el umbral a partir del cual no es tan importante que la predicción sea correcta. Para 'epsilon-insensitive', cualquier diferencia entre la predicción actual y la correcta - según la etiqueta -, es ignorada si es inferior a este threshold.
+	- __penalty__. Regularización a utilizar. Por defecto se usa _l2_
+		- 'l2'
+		- 'l1'
+		- 'elasticnet'
+	- __alpha__. Factor a aplicar al termino de regularización, o _penalty_. Por defecto es 0.0001
+	- __l1_ratio__. Se usa en Elastic Net. Por defecto es 0.15.  0 <= l1_ratio <= 1. l1_ratio=0 corresponderá a l2 penalty, l1_ratio=1 a l1.
+	- __fit_intercept__. Indica si debe estimarse el termino constante, el bias, o no. Por defecto es True, se estima
+- Aprendizaje:
+	- __max_iter__. número máximo de iteraciones
+	- __learning_rate__. Define como actualizar la learning rate. Por defecto es invscaling.
+		- 'constant': Constante. eta = eta0
+		- 'optimal': eta = 1.0 / (alpha * (t + t0)) where t0 is chosen by a heuristic proposed by Leon Bottou.
+		- 'invscaling': eta = eta0 / pow(t, power_t)
+		- 'adaptive': eta = eta0, mientras el error vaya disminuyendo . Si durante _n_iter_no_change_ epochs consecutivas no se decrementa el error, o no lo hace por encima de la tolerancia, _tol_, y _early_stopping_ es True, divide la tasa actual de aprendizaje por cinco
+	- __eta0__. Learning rate de partida
+	- __power_tdouble__. Por defecto 0.5. Exponente usado en inverse scaling.
+	- __tol__. Tolerancia. Por debajo de este error, el algoritmo se detiene
+	- __early_stopping__. Por defecto es False. Si no cambia el error durante _n_iter_no_change epochs, detiene el aprendizaje
+	- __n_iter_no_change__. Paciencia del algoritmo. Por defecto es 5
+	- __validation_fraction__. Por defecto 0.1. Proporción de los datos que se apartarán para validar el error en el caso de _early stopping_. Solo se usa si _early_stopping_ es True
+
 
 ### Binario
 
@@ -161,7 +215,27 @@ len(ovr_clf.estimators_)
 10
 ```
 
+## Support Vector Machine (SVM)
 
+La función de coste en SVM no trata de ajustar los resultados del modelo a las observaciones, sino buscar la recta 
+
+
+```py
+import numpy as np
+from sklearn import datasets
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import LinearSVC
+
+iris = datasets.load_iris()
+
+X = iris["data"][:, (2, 3)] # petal length, petal width
+y = (iris["target"] == 2).astype(np.float64) # Iris-Virginica
+
+svm_clf = Pipeline([("scaler", StandardScaler()),("linear_svc", LinearSVC(C=1, loss="hinge")),])
+
+svm_clf.fit(X, y)
+```
 
 
 
