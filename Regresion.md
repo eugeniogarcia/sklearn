@@ -1,6 +1,6 @@
-# Regresion
+# 1 Regresion
 
-## Linear Regression
+## 1.1 Linear Regression
 
 Calcula la regresión lineal utilizando la formula matemática.
 
@@ -27,13 +27,13 @@ lin_reg.predict(X_new)
 array([[4.21509616],[9.75532293]])
 ```
 
-### Complejidad computacional
+### 1.1.1 Complejidad computacional
 
 - El entrenamiento es __O(n^2)__ con el número de features
 - El entrenamiento es __lineal__ con el número de datos
 - La estimación es __lineal__
 
-### Regularización
+### 1.1.2 Regularización
 
 Para evitar el overfit una técnica habitual es limitar la norma de los pesos, tratar que los pesos sean lo más pequeños posible. 
 
@@ -73,7 +73,7 @@ elastic_net.fit(X, y)
 elastic_net.predict(X_new)
 ```
 
-## Stocastic Gradient Descent
+## 1.2 Stocastic Gradient Descent
 
 Aplica gradient descent, pero en lugar de aplicarlo sobre todos los datos de entrenamiento, lo que hace el algoritmo es elegir uno al azar, y actualizar los pesos con este dato.
 
@@ -134,7 +134,7 @@ sgd_reg.n_iter_ #Numero de epochs que se ejecutaron
 sgd_reg.t_ #Numero de veces que se actualizaron los pesos
 ```
 
-### Complejidad computacional
+### 1.2.1 Complejidad computacional
 
 El coste de tener que entrenar más features se incrementa de forma lineal, de modo que cuando tenemos muchas features el SGD es un método más óptimo que la regresión lineal.
 
@@ -142,11 +142,11 @@ El SGD es __muy sensible a la escala de los datos__, y por lo tanto se requiere 
 
 El coste de adiestrar el SGD es lineal con el número de datos de entrenamiento
 
-### Regularización
+### 1.2.2 Regularización
 
 La regularización de los pesos es uno de los hiper-parámetros del SGD - _penalty_. Raro será el caso en el que no tengamos que regularizar los pesos, por eso se incluye como hiper-parametro del modelo - en lugar de en un modelo a parte.
 
-## regresión Polinomial
+## 1.3 regresión Polinomial
 
 Cuando los datos no tienen una estructura lineal, sino más bien polinomial, ¿qué podemos hacer?. Un truco que podemos aplicar para que los métodos anteriores sigan siendo válidos, es calcular series que contenga las potencias de las features, de modo que el problema pueda ser tratado como un caso lineal.
 
@@ -165,7 +165,7 @@ X_poly[0]
 array([-0.75275929, 0.56664654])
 ```
 
-### Ejemplo
+### 1.3.1 Ejemplo
 
 Veamos un ejemplo en el que se define un pipeline en el que se hace una regresión polinomial:
 
@@ -177,4 +177,27 @@ polynomial_regression = Pipeline([("poly_features", PolynomialFeatures(degree=10
 polynomial_regression.fit(X, y)
 
 polynomial_regression.predict(X)
+```
+
+## 1.4 Support Vector Machines
+
+SVR se utilizan fundamentalmente para clasificar, pero también podemos usarlos para resolver problemas de regresión. La idea aquí es la inversa a la del problema de clasificación, esto es, buscar que todos los puntos entren dentro de el margen de tolerancia, de nuestra "calle", y que este margen de tolerancia sea lo más pequeño posible.
+
+```py
+from sklearn.svm import LinearSVR
+
+svm_reg = LinearSVR(epsilon=1.5)
+
+svm_reg.fit(X, y)
+```
+
+### 1.4.1 Problemas no lineales
+
+De la misma forma que en el caso de clasificación podíamos usar SV__C__, en el de regresión podremos usar SV__R__ para tratar problemas que no sean lineales:
+
+```py
+from sklearn.svm import SVR
+svm_poly_reg = SVR(kernel="poly", degree=2, C=100, epsilon=0.1)
+
+svm_poly_reg.fit(X, y)
 ```

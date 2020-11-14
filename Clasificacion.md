@@ -1,6 +1,6 @@
-# Clasificadores
+# 1 Clasificadores
 
-## Logistic Regression (binario y multi-class)
+## 1.1 Logistic Regression (binario y multi-class)
 
 Usamos este método para clasificar. Por un lado el modelo que vamos a estimar aplica una función de activación, la __Logistic function__ _( 1/(1+e^-x)_ al resultado del modelo lineal.
 
@@ -36,7 +36,7 @@ No hay una solución matemática que resuelva este problema de optimización, as
 
 Los algoritmos 'newton-cg', 'sag', y 'lbfgs' admiten solo la regularización 'l2' - o trabajar sin regularización. El algoritmo 'liblinear' admite tanto 'l1' como 'l2'.Elastic-Net solo se admite con el algoritmo 'saga'.
 
-### Clasificación Binaria
+### 1.1.1 Clasificación Binaria
 
 Notese que el método es __predict_proba__. Usamos los valores por defecto
 
@@ -53,7 +53,7 @@ log_reg.predict_proba(X)
 log_reg.classes_
 ```
 
-### Multi-class (softmax)
+### 1.1.2 Multi-class (softmax)
 
 Notese que el método es __predict_proba__. Indicamos que se trata de un caso multi-class, y al elegir _multinomial_ estamos usando softmax:
 
@@ -71,7 +71,7 @@ array([[6.38014896e-07, 5.74929995e-02, 9.42506362e-01]])
 log_reg.classes_
 ```
 
-### Multi-class (ovr)
+### 1.1.3 Multi-class (ovr)
 
 Notese que el método es __predict_proba__. Como _y_ tiene varias clases, y no especificamos nada en _multinomial_, aplicará el valor por defecto, 'ovr':
 
@@ -89,7 +89,7 @@ array([[6.38014896e-07, 5.74929995e-02, 9.42506362e-01]])
 log_reg.classes_
 ```
 
-## Stocastic Gradient Descent (binario y multi-class)
+## 1.2 Stocastic Gradient Descent (SGD) (binario y multi-class)
 
 Por defecto utiliza una función de coste __hinge__, _y = max(0, 1-t * y)_, para definir el clasificador.
 
@@ -134,7 +134,7 @@ Se configura con los siguientes parámetros:
 	- __validation_fraction__. Por defecto 0.1. Proporción de los datos que se apartarán para validar el error en el caso de _early stopping_. Solo se usa si _early_stopping_ es True
 
 
-### Binario
+### 1.2.1 Binario
 
 ```py
 from sklearn.linear_model import SGDClassifier
@@ -147,7 +147,7 @@ sgd_clf.predict([some_digit])
 array([ True])
 ```
 
-### Multi-class
+### 1.2.2 Multi-class
 
 Cuando y_train tiene más de una clases, el SGDClassifier automáticamente trabaja en modo multi-class, creando un clasificador para cada una de las clases, y retornando aquella clase en la que el threshold resulto ser más alto. Esto es lo que se denomina Uno contra Todo, o OvR (One vs Rest).
 
@@ -177,7 +177,124 @@ array([[-15955.22627845, -38080.96296175, -13326.66694897,
 -10631.35888549]])
 ```
 
-#### OneVsOneClassifier
+## 1.3 Support Vector Machine (SVM) (binario y multi-class)
+
+### 1.3.1 Datasets separables de forma lineal (LinearSVC)
+
+El modelo se puede configurar con los siguientes parámetros:
+
+- __loss__. función de error a optimizar. Por defecto es 'squared_hinge'. Otras opciones son:
+	- 'hinge'. _y = max(0, 1-t * y)_
+	- 'squared_hinge'. Cuadrado de la función 'hinge'
+- __penalty__. Regularización a utilizar. Por defecto se usa _l2_
+	- 'l2'
+	- 'l1'
+	- 'elasticnet'
+- __tol__. Tolerancia. Por debajo de este error, el algoritmo se detiene
+- __C__. Por defecto 1.0. Parametro de regularización. Cuanto más pequeño es, más tolerantes somos a _margin violations_. Cuanto más pequeño es, más ancha es la banda. Tener una banda ancha indica que el modelo generalizara mejor, que si añadimos algun dato más, la probabilidad de que lo clasifiquemos bien es mayor. Cuanto menor sea la banda, "más apelotonados" estarán los nuevos datos, y será más dificil separar unos de otros.
+- __multi_class__. Determina que estratégia seguir para casos multi-class. Por defecto 'ovr':
+	- 'ovr'.
+	- 'crammer_singer'. Raramente se usa
+- __fit_intercept__. Indica si debe estimarse el termino constante, el bias, o no. Por defecto es True, se estima
+- __random_state__. Semilla para el generador de números aleatorios. Por defecto es None. Es un valor entero. Solo se utiliza cuando dual es True. En caso de que dual sea False, la implementación del algoritmo es determinista
+- __max_iter__. número máximo de iteraciones
+- __dual__. Por defecto True. El algoritmo liblinear, que es el que se utiliza con este modelo, es _dual-based_. Cuando n_samples > n_features es preferible False. True es preferible cuando:
+	- Datasets grandes y "sparse" (e.g., documents) con un C no muy grande
+	- n_samples << n_features
+
+```py
+import numpy as np
+from sklearn import datasets
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import LinearSVC
+
+iris = datasets.load_iris()
+
+X = iris["data"][:, (2, 3)] # petal length, petal width
+y = (iris["target"] == 2).astype(np.float64) # Iris-Virginica
+
+svm_clf = Pipeline([("scaler", StandardScaler()),("linear_svc", LinearSVC(C=1, loss="hinge")),])
+
+svm_clf.fit(X, y)
+```
+
+#### Nota
+
+Podemos usa otros modelos como alternativa a LinearSVC:
+- SVC. Es más lento que LinearSVC, por esto no se recomienda
+	```py
+	SVC(kernel="linear", C=1)
+	```
+- SGDClassifier. Aplica Stochastic Gradient Descent. No converge tan rápido como LinearSVC, pero cuando el tamaño del dataset es muy grande y no cabe en la memoría, puede ser util. También nos servirá para casos en los que el entrenamiento tenga que hacerse online 
+	```py
+	SGDClassifier(loss="hinge",alpha=1/(m*C))
+	```
+	
+### 1.3.2 Datasets NO separables de forma lineal 
+
+#### 1.3.2.1 Usar Polynomial Regresion + LinearSVC
+
+Usamos la misma táctica que ya vimos para reutilizar la regresión lineal en problemas polinómicos. Calculamos series con las potencias de las features. Cuando Mayor sea el grado que elijamos mayor será el número de features que se calcularan. Esto hace que el método resulte prohibitivo cuando la potencia sea alta.
+
+Veamos con un pipeline de ejemplo como sería. En esencia no cambia nada con respecto al caso de clasificación lineal.
+
+```py
+from sklearn.datasets import make_moons
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import PolynomialFeatures
+
+polynomial_svm_clf = Pipeline([("poly_features", PolynomialFeatures(degree=3)),("scaler", StandardScaler()),("svm_clf", LinearSVC(C=10, loss="hinge"))])
+
+polynomial_svm_clf.fit(X, y)
+
+```
+
+#### 1.3.2.2 Usar Polynomial Kernel (SVC)
+
+El método anterior deja de ser práctico a medida que vamos subiendo el grado de la potencia. El algoritmo que usamos con este modelo esta basado en _libsvm_. La complejidad del entrenamiento es _O(n*2)_ con el número de muestras. Por este motivo para datasets grandes es aconsejable usar el _LinearSVC_ o el _SGDClassifier_.
+
+Los Kernels son una feature que tenemos disponible en el modelo __SVC__. El [Kernel](https://scikit-learn.org/stable/modules/svm.html#svm-kernels) es una función que nos permite definir la distancia entre dos puntos. Aplicaremos un kernel sobre los datos, y los datos que resultan, una vez el kernel se ha aplicado sobre ellos, serán separables linealmente. Seran estos datos transformados los que clasifiquemos. Esta es la idea.
+
+__SVC__ sigue una estratégia __OvO__ cuando el problema de clasificación sea __multi-class__.
+
+Los parámetros con los que podemos configurar __SVC__ son:
+
+- __C__. Por defecto 1.0. Es la inversa de la intensidad de la regularización. Es un concepto similar al usado en vector machines, valores pequeños implican una intensidad en la regularización mayor
+- __kernel__. Por defecto 'rbf'. Puede tomar los siguientes [valores](https://scikit-learn.org/stable/modules/svm.html#svm-kernels):
+	- 'linear'
+	- 'poly'
+	- 'rbf'
+	- 'sigmoid'
+	- 'precomputed'
+- __degree__. Por defecto 3. Grado de la función polinomial en el caso de que el kernel sea 'poly'
+- __gamma__. Por defecto 'scale'. Es el coeficiente del kernel. Puede valer:
+	- 'scale'. Usa _1 / (n_features * X.var())_ como valor para gamma 
+	- 'auto'. Usa _1 / n_features_
+- __coef__. Por defecto 0.0. Es el término independiente en la función del kernel. Solo es relevante cuando el kernel es 'poly' o 'sigmoid'
+- __tol__. Por defecto el valor es 1e-4. Tolerancia usada para parar el adiestramiento
+- __max_iter__. Máximo número de interacciones. El valor por defecto es 100
+- __decision_function_shape__. Por defecto 'ovr'. Puede valer 'ovo' o 'ovr'. Este parámetro se ignora en casos de clasificación binaria
+- __random_state__. Por defecto None. Se usa cuando el algoritmo es 'sag', 'saga' o 'liblinear', para que se barajen los datos
+
+Veamos un ejemplo:
+
+```py
+from sklearn.svm import SVC
+
+poly_kernel_svm_clf = Pipeline([("scaler", StandardScaler()),("svm_clf", SVC(kernel="poly", degree=3, coef0=1, C=5))])
+
+poly_kernel_svm_clf.fit(X, y)
+```
+
+
+## 1.4 Multi-Class Estrategias
+
+Cuando se trata hacer una clasificación multi-class con SGD o con SVM, podemos forzar a que se siga una estratágia OvO o OvR utilizando estos wrappers:
+- OneVsOneClassifier
+- OneVsRestClassifier
+
+### 1.4.1 OneVsOneClassifier
 
 Podemos forzar a que se utilice la estratégia OvO con el siguiente modelo. Con esta estrategia se crea un modelo para cada pareja. Si tenemos N clases, N * (N-1) / 2 modelos. Si tuvieramos 10 clases, el total de modelo serán 45:
 
@@ -197,7 +314,7 @@ len(ovo_clf.estimators_)
 
 Si bien el número de modelos se incrementa, cada modelo se adiestra con un subconjunto del total.
 
-#### OneVsRestClassifier
+### 1.4.2 OneVsRestClassifier
 
 Podemos forzar a que se utilice la estratégia OvR con el siguiente modelo. Con esta estrategia se crea un modelo para cada clase. Si tenemos N clases, N modelos. Si tuvieramos 10 clases, el total de modelo serán 10:
 
@@ -214,29 +331,3 @@ array([5], dtype=uint8)
 len(ovr_clf.estimators_)
 10
 ```
-
-## Support Vector Machine (SVM)
-
-La función de coste en SVM no trata de ajustar los resultados del modelo a las observaciones, sino buscar la recta 
-
-
-```py
-import numpy as np
-from sklearn import datasets
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.svm import LinearSVC
-
-iris = datasets.load_iris()
-
-X = iris["data"][:, (2, 3)] # petal length, petal width
-y = (iris["target"] == 2).astype(np.float64) # Iris-Virginica
-
-svm_clf = Pipeline([("scaler", StandardScaler()),("linear_svc", LinearSVC(C=1, loss="hinge")),])
-
-svm_clf.fit(X, y)
-```
-
-
-
-
