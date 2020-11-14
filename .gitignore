@@ -6,3 +6,7 @@
 images
 spam
 easy_ham
+my_logs
+*.h5
+*.index
+*.data*
