@@ -276,6 +276,7 @@ Los parámetros con los que podemos configurar __SVC__ son:
 - __max_iter__. Máximo número de interacciones. El valor por defecto es 100
 - __decision_function_shape__. Por defecto 'ovr'. Puede valer 'ovo' o 'ovr'. Este parámetro se ignora en casos de clasificación binaria
 - __random_state__. Por defecto None. Se usa cuando el algoritmo es 'sag', 'saga' o 'liblinear', para que se barajen los datos
+- __probability__. Por defecto False. Cuando True, SVC usa cross-validation para estimar las probabilidades de cada clase, de modo que el predictor tendrá también el método _predict_proba_ disponible. Por defecto SVC nos indicara un booleano - clasificación binaria - o la clase - multi-class -, no las probabilidades
 
 Veamos un ejemplo:
 
@@ -286,7 +287,6 @@ poly_kernel_svm_clf = Pipeline([("scaler", StandardScaler()),("svm_clf", SVC(ker
 
 poly_kernel_svm_clf.fit(X, y)
 ```
-
 
 ## 1.4 Multi-Class Estrategias
 
@@ -331,3 +331,89 @@ array([5], dtype=uint8)
 len(ovr_clf.estimators_)
 10
 ```
+
+## 1.5 Ensemble Learning
+
+Podemos usar varios clasificadores y combinar sus resultados en un ensemble. El resultado del ensemble será tanto mejor como más independientes entre si sean los clasificadores que usamos. Podemos fomentar la independencia entre los clasificadores de dos maneras:
+- Usando diferentes tipos de clasificadores. De esta forma será dificil que compartan datos intermedios
+- Usando diferentes juegos de datos para entrenar cada clasificador
+
+La forma en que combinamos los resultados de los clasificadores intermedios pude hacerse de dos formas:
+- hard. Tomamos como clasificación el voto mayoritarío
+- soft. En aquellos casos en los que los clasificadores intermedios retornen una probabilidad - los predictores tengan un método _predict_proba_ -, podemos usar la probabilidad estimada en cada clasificador para calcular la probabilidad del conjunto
+
+### 1.5.1 Diversidad usando diferentes modelos
+
+Veamos un ejemplo. En este ejemplo usamos __hard__ voting, es decir la mayoría gana:
+
+```py
+#Ensemble
+from sklearn.ensemble import VotingClassifier
+#Clasificadores individuales
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+
+#Crea cada uno de los clasificadores
+log_clf = LogisticRegression()
+rnd_clf = RandomForestClassifier()
+svm_clf = SVC()
+
+#Crea el ensemble. El algoritmo de votación es hard. Se vota por mayoría
+voting_clf = VotingClassifier(estimators=[('lr', log_clf), ('rf', rnd_clf), ('svc', svm_clf)],voting='hard')
+
+#Entrena
+voting_clf.fit(X_train, y_train)
+```
+
+Podemos ver como la precisión de cada clasificador es menor que la del ensemble:
+
+```py
+from sklearn.metrics import accuracy_score
+
+#Hacemos el entrenamiento de cada clasificador, y luego del ensemble
+for clf in (log_clf, rnd_clf, svm_clf, voting_clf):
+	clf.fit(X_train, y_train)
+	y_pred = clf.predict(X_test)
+	print(clf.__class__.__name__, accuracy_score(y_test, y_pred))
+
+
+LogisticRegression 0.864
+RandomForestClassifier 0.896
+SVC 0.888
+VotingClassifier 0.904
+```
+
+Si queremos usar __soft__ voting, que se calcule la probabilidad promedio, se necesitan dos cosas:
+- Que todos los clasificadores incluyan el metodo *predict_proba()*
+- Configurar _soft_ en lugar de _hard_ en el ensemble
+
+```py
+log_clf = LogisticRegression(solver="lbfgs", random_state=42)
+rnd_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+svm_clf = SVC(gamma="scale", probability=True, random_state=42)
+
+voting_clf = VotingClassifier(estimators=[('lr', log_clf), ('rf', rnd_clf), ('svc', svm_clf)],voting='soft')
+voting_clf.fit(X_train, y_train)
+```
+
+### 1.5.2 Diversidad con el mismo modelo
+
+Para conseguir diversidad usando el mismo tipo de clasificador, lo que tendremos que hacer es entrenar cada clasificador con datos diferentes. De esta forma conseguimos la "independencia" que hará que el ensemble se comporte mejor.
+
+Los datos se eligen al azar. Podemos controlar si el mismo dato se usa en varios clasificadores, _bootstrap=True_, o si un dato solo se utiliza en un controlador _bootstrap=False_.
+
+En este ejemplo estamos diciendo que se usen 500 clasificadores, y que cada clasificador se entrene con un máximo de 100 datos - elegidos al azar:
+
+```py
+from sklearn.ensemble import BaggingClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+bag_clf = BaggingClassifier(DecisionTreeClassifier(), n_estimators=500,max_samples=100, bootstrap=True, n_jobs=-1)
+
+bag_clf.fit(X_train, y_train)
+y_pred = bag_clf.predict(X_test)
+```
+
+_Bootstrap=True_ produce generalmente mejores modelos, al incrementarse la diversidad entre los clasificadores.
+

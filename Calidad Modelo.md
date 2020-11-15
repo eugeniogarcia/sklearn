@@ -95,8 +95,20 @@ for train_index, test_index in skfolds.split(X_train, y_train_5):
 	n_correct = sum(y_pred == y_test_fold)
 	print(n_correct / len(y_pred)) # prints 0.9502, 0.96565 and 0.96495
 ```
+## accuracy_score
 
+Precisión del modelo:
 
+```py
+from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LogisticRegression
+
+log_clf = LogisticRegression()
+
+log_clf.fit(X_train, y_train)
+y_pred = log_clf.predict(X_test)
+accuracy_score(y_test, y_pred))
+```
 
 ## Confusion Matrix (Clasificación Binaria)
 
