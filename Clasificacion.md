@@ -416,4 +416,133 @@ y_pred = bag_clf.predict(X_test)
 ```
 
 _Bootstrap=True_ produce generalmente mejores modelos, al incrementarse la diversidad entre los clasificadores.
+#### 1.5.2.1 oob_score_
 
+Cuando _Bootstrap=True_ no todos los datos en el dataset van a ser utilizados para adiestrar los clasificadores del ensemble. Podemos usar aquellos que no se hayan empleado para validar el modelo especificando _oob_score=True_:
+
+```py
+bag_clf = BaggingClassifier(DecisionTreeClassifier(), n_estimators=500,bootstrap=True, n_jobs=-1, oob_score=True)
+
+bag_clf.fit(X_train, y_train)
+
+bag_clf.oob_score_
+0.90133333333333332
+
+bag_clf.oob_decision_function_
+
+array([[0.31746032, 0.68253968],
+[0.34117647, 0.65882353],
+[1. , 0. ],
+...
+[1. , 0. ],
+[0.03108808, 0.96891192],
+[0.57291667, 0.42708333]])
+```
+
+Podemos ver con *oob_decision_function_* la decisión que se tomo con cada registro.
+### 1.5.3 Random Subspaces
+
+De la misma forma que podemos conseguir diversidad alimentando diferentes juegos de datos a diferentes clasificadores, podemos trocear las features, de modo que no alimentemos a todos los clasificadores con las mismas features. Esto puede ser interesante en casos en los que haya muchas dimensiones.
+
+Para configurar estos subspaces hay dos hiper-parámetros muy parecidos a los que hemos usado para elegir aleatoriamente los datos:
+- max_features. Define cuantas features se encargará de gestionar cada clasificador 
+- bootstrap_features. Define si la misma feature puede o no usarse en más de un clasificador - y si habrá features que pudieran no usarse en absoluto
+### 1.5.4 Random Forests
+
+Es un caso particular de ensemble, en el que el clasificador son Decission Trees, y se usa _bootstrap=True_.
+
+```py
+from sklearn.ensemble import RandomForestClassifier
+
+rnd_clf = RandomForestClassifier(n_estimators=500, max_leaf_nodes=16, n_jobs=-1)
+rnd_clf.fit(X_train, y_train)
+y_pred_rf = rnd_clf.predict(X_test)
+```
+
+Viene a ser equivalente a:
+
+```py
+bag_clf = BaggingClassifier(DecisionTreeClassifier(splitter="random", max_leaf_nodes=16),n_estimators=500, max_samples=1.0, bootstrap=True, n_jobs=-1)
+```
+
+Digo viene porque _RandomForestClassifier_ introduce algunas optimizaciones sobre la forma general de crear ensembles.
+
+### 1.5.5 Importancia de cada Feature
+
+Podemos evaluar la importancia de cada feature en el decission tree. La importancia se mide evaluando el efecto que la feature tiene en la reducción del gini/entropía en el arbol. Esta información está accesible en **feature_importances_**:
+
+
+```py
+from sklearn.datasets import load_iris
+
+iris = load_iris()
+rnd_clf = RandomForestClassifier(n_estimators=500, n_jobs=-1)
+rnd_clf.fit(iris["data"], iris["target"])
+
+for name, score in zip(iris["feature_names"], rnd_clf.feature_importances_):
+	print(name, score)
+
+sepal length (cm) 0.112492250999
+sepal width (cm) 0.0231192882825
+petal length (cm) 0.441030464364
+petal width (cm) 0.423357996355
+```
+### 1.5.6 Boosting
+
+Con _Boosting_ lo que hacemos es hacer varias rondas de entrenamiento de forma secuencial, con diferentes clasificadores. La segunda ronda se apoya en los resultados de la primera ronda para mejorar la estimación, y así sucesivamente.
+#### AdaBoostClassifier
+
+Con _AdaBoosting_ lo que hacemos es hacer varias rondas de entrenamiento. En la primer ronda entrenamos los clasificadores, y miramos aquellas instancias que se han clasificado peor. A continuación haremos otra ronda de entrenamiento, pero alimentaremos estas instancias con un peso mayor, de modo que se mejore el resultado del aprendizaje. Esto se hará varias veces hasta que estemos satisfechos con el resultado. 
+
+```py
+from sklearn.ensemble import AdaBoostClassifier
+
+ada_clf = AdaBoostClassifier(DecisionTreeClassifier(max_depth=1), n_estimators=200,
+algorithm="SAMME.R", learning_rate=0.5)
+
+ada_clf.fit(X_train, y_train)
+```
+
+#### GradientBoostingRegressor
+
+La idea es la misma que en el AdaBoosting, pero en lugar de ajustar pesos de instancias, lo que haremos es en la segunda ronda estimar el error, el residuo, obtenido en la primera, y así sucesivamente. Por ejemplo, hacemos un entrenamiento:
+
+```py
+from sklearn.tree import DecisionTreeRegressor
+
+tree_reg1 = DecisionTreeRegressor(max_depth=2)
+tree_reg1.fit(X, y)
+```
+
+El segundo predictor, *tree_reg2*, modelara el residuo del primero:
+
+```py
+y2 = y - tree_reg1.predict(X)
+
+tree_reg2 = DecisionTreeRegressor(max_depth=2)
+tree_reg2.fit(X, y2)
+```
+
+El tercero hará lo propio con el residuo del segundo:
+
+```py
+y3 = y2 - tree_reg2.predict(X)
+
+tree_reg3 = DecisionTreeRegressor(max_depth=2)
+tree_reg3.fit(X, y3)
+```
+
+Finalmente, cuando queramos hacer una estimación, tomaremos la suma de las estimaciones de los tres modelos:
+
+```py
+y_pred = sum(tree.predict(X_new) for tree in (tree_reg1, tree_reg2, tree_reg3))
+```
+
+En sklearn existe una clase, *GradientBoostingRegressor*, que implementa exactamente lo que acabamos de hacer
+
+```py
+from sklearn.ensemble import GradientBoostingRegressor
+
+gbrt = GradientBoostingRegressor(max_depth=2, n_estimators=3, learning_rate=1.0)
+gbrt.fit(X, y)
+```
