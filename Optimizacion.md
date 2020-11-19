@@ -21,7 +21,7 @@ grid_search = GridSearchCV(forest_reg, param_grid, cv=5,scoring='neg_mean_square
 grid_search.fit(housing_prepared, housing_labels)
 ```
 
-Podemos ver el resultado de la búsqueda:
+Podemos ver el resultado de la búsqueda, cuales son los mejores parámetros:
 
 ```py
 grid_search.best_params_
@@ -47,6 +47,31 @@ cvres = grid_search.cv_results_
 for mean_score, params in zip(cvres["mean_test_score"], cvres["params"]):
 	print(np.sqrt(-mean_score), params)
 ```
+
+### Pipelines
+
+Si estamos usando una pipeline, el diccionario de valores a usar en el universo de pruebas seguirá una sintaxis especial:
+
+```py
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import GridSearchCV
+
+pipeline = Pipeline([
+    ("pepe", KMeans(n_clusters=50, random_state=42)),
+    ("log_reg", LogisticRegression(multi_class="ovr", solver="lbfgs", max_iter=5000, random_state=42)),
+])
+
+param_grid = dict(pepe__n_clusters=range(80, 100))
+
+grid_clf = GridSearchCV(pipeline, param_grid, cv=3, verbose=2)
+grid_clf.fit(X_train, y_train)
+
+grid_clf.best_params_
+
+grid_clf.score(X_test, y_test)
+```
+
+Notese como el parámetro *n_clusters* en el diccionario lo llamamos *pepe__n_clusters*. Esto es así porque la entrada en el pipeline donde hemos definido el kmeans se llama *pepe*.
 
 ## Optimizando modelos Keras
 
