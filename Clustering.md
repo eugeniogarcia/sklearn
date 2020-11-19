@@ -174,7 +174,9 @@ silhouette_score(X, kmeans.labels_)
 ```
 ### Casos de Uso
 
-- __Image color segmentation__. Podemos tomar una imagen, y reducir sus colores a número fijo. Usamos tantos centroides como colores queremos tener, y reemplazamos cada color por su centroide
+#### Image color segmentation
+
+Podemos tomar una imagen, y reducir sus colores a número fijo. Usamos tantos centroides como colores queremos tener, y reemplazamos cada color por su centroide
 
 ```py
 X = image.reshape(-1, 3)
@@ -184,5 +186,46 @@ segmented_img = kmeans.cluster_centers_[kmeans.labels_]
 segmented_img = segmented_img.reshape(image.shape)
 ```
 
-- __Clustering as preprocessing tool__
-- __SemiSupervised learning__
+#### Clustering as preprocessing tool
+
+Podemos preprocesar los datos, de modo que en lugar de clasificar las instancias, clasifiquemos los centroides. Veamos un ejemplo. Podemos aplicar logistic regression para calcular la probilidad de que una instancia sea un dígito u otro:
+
+```py
+from sklearn.datasets import load_digits
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+
+X_digits, y_digits = load_digits(return_X_y=True)
+X_train, X_test, y_train, y_test = train_test_split(X_digits, y_digits, random_state=42)
+
+log_reg = LogisticRegression(multi_class="ovr", solver="lbfgs", max_iter=5000, random_state=42)
+log_reg.fit(X_train, y_train)
+log_reg.score(X_test, y_test)
+```
+
+Podemos u clasificar los datos previamente en clusters, de modo que lo que el logistic regresion tenga que determinar cada uno de los centroides si corresponde con uno u otro dígito:
+
+```py
+pipeline = Pipeline([
+    ("pepe", KMeans(n_clusters=50, random_state=42)),
+    ("log_reg", LogisticRegression(multi_class="ovr", solver="lbfgs", max_iter=5000, random_state=42)),
+])
+pipeline.fit(X_train, y_train)
+
+pipeline.score(X_test, y_test)
+```
+
+Podemos buscar el valor óptimo:
+
+```py
+from sklearn.model_selection import GridSearchCV
+
+param_grid = dict(pepe__n_clusters=range(30, 40))
+grid_clf = GridSearchCV(pipeline, param_grid, cv=3, verbose=2)
+grid_clf.fit(X_train, y_train)
+
+grid_clf.score(X_test, y_test)
+```
+
+#### SemiSupervised learning
