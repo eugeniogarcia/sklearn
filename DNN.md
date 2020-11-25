@@ -273,6 +273,8 @@ Hay cuatro técnicas:
 
 - __Power schedulling__. El learning arranca con un valor _lr0_, que cada _s_ pasos se divide. La secuencia sería: _lr0_, _lr0 / 2_, _lr0 / 3_, _lr0 / 4_, _lr0 / 5_, ...
 
+Para configurar este método basta con especificar el parámetro *decay* en el optimizer:
+
 ```py
 optimizer = keras.optimizers.SGD(lr=0.01, decay=1e-4)
 ```
@@ -280,6 +282,8 @@ optimizer = keras.optimizers.SGD(lr=0.01, decay=1e-4)
 Donde _1 / decay_ es el número de pasos a partir de los cuales dividimos la _lr_ en otra unidad.
 
 - __Exponential schedulling__. El learning arranca con un valor _lr0_, que cada _s_ pasos se divide. La secuencia sería: _lr0_, _lr0 * .1_, _lr0 * .1^2_, _lr0 * .1^3_, _lr0 * .1^4_, ...
+
+Esta optimización se configura especificando un callback. Se define un método que retorna el *lr*, y se usa el callback `keras.callbacks.LearningRateScheduler`:
 
 ```py
 #Definimos una función que toma un par de parámetros y nos devuelve la función de decay
@@ -295,7 +299,101 @@ exponential_decay_fn = exponential_decay(lr0=0.01, s=20)
 lr_scheduler = keras.callbacks.LearningRateScheduler(exponential_decay_fn)
 history = model.fit(X_train_scaled, y_train, [...], callbacks=[lr_scheduler])
 ```
+
+Otra forma de lograr lo mismo es usando un __custom callback__:
+
+```py
+K = keras.backend
+
+class ExponentialDecay(keras.callbacks.Callback):
+    def __init__(self, s=40000):
+        super().__init__()
+        self.s = s
+
+    def on_batch_begin(self, batch, logs=None):
+        # Note: the `batch` argument is reset at each epoch
+        lr = K.get_value(self.model.optimizer.lr)
+        K.set_value(self.model.optimizer.lr, lr * 0.1**(1 / s))
+
+    def on_epoch_end(self, epoch, logs=None):
+        logs = logs or {}
+        logs['lr'] = K.get_value(self.model.optimizer.lr)
+```
+
+Ahora lo podemos usar:
+
+```py
+model = keras.models.Sequential([
+    keras.layers.Flatten(input_shape=[28, 28]),
+    keras.layers.Dense(300, activation="selu", kernel_initializer="lecun_normal"),
+    keras.layers.Dense(100, activation="selu", kernel_initializer="lecun_normal"),
+    keras.layers.Dense(10, activation="softmax")
+])
+
+lr0 = 0.01
+optimizer = keras.optimizers.Nadam(lr=lr0)
+model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+n_epochs = 25
+
+s = 20 * len(X_train) // 32 # number of steps in 20 epochs (batch size = 32)
+exp_decay = ExponentialDecay(s)
+history = model.fit(X_train_scaled, y_train, epochs=n_epochs,
+                    validation_data=(X_valid_scaled, y_valid),
+                    callbacks=[exp_decay])
+```
+
 Cuando se graba un modelo, los parámetros, incluidos la _lr_, se guardan con él, de modo que cuando se cargue los datos del modelo, se retomará en el mismo estado en el que estaba cuando se guardó. Sin embargo, cuando usamos _epoch_, aquí tenemos un problema, porque _epoch_ se reseterará a cero cada vez que llamamos al método _fit()_. Una opción sería pasar el parámetro __initial_epoch__ cuando llamemos a _fit()_.
 
 - __Picewise constant schedulling__. Con este enfoque tendríamos algo así como _lr0_ los primeros 5 epochs, _lr1_ los siguientes 50, etc.
+
+Como antes, definimos un método que devuelve la *lr*:
+
+```py
+def piecewise_constant_fn(epoch):
+    if epoch < 5:
+        return 0.01
+    elif epoch < 15:
+        return 0.005
+    else:
+        return 0.001
+```
+
+O si queremos hacerlo más sofisticado y que sea parametrizable:
+
+```py
+def piecewise_constant(boundaries, values):
+    boundaries = np.array([0] + boundaries)
+    values = np.array(values)
+    def piecewise_constant_fn(epoch):
+        return values[np.argmax(boundaries > epoch) - 1]
+    return piecewise_constant_fn
+
+piecewise_constant_fn = piecewise_constant([5, 15], [0.01, 0.005, 0.001])
+```
+
+Podemos usarlo, como antes, utilizando el callback `keras.callbacks.LearningRateScheduler`:
+
+```py
+lr_scheduler = keras.callbacks.LearningRateScheduler(piecewise_constant_fn)
+
+model = keras.models.Sequential([
+    keras.layers.Flatten(input_shape=[28, 28]),
+    keras.layers.Dense(300, activation="selu", kernel_initializer="lecun_normal"),
+    keras.layers.Dense(100, activation="selu", kernel_initializer="lecun_normal"),
+    keras.layers.Dense(10, activation="softmax")
+])
+
+model.compile(loss="sparse_categorical_crossentropy", optimizer="nadam", metrics=["accuracy"])
+n_epochs = 25
+history = model.fit(X_train_scaled, y_train, epochs=n_epochs,
+                    validation_data=(X_valid_scaled, y_valid),
+                    callbacks=[lr_scheduler])
+```
+
 - __Performance schedulling__. Usaríamos un algoritmo similar a los que se usan para para el training de forma anticipada
+
+Podemos usar el callback `keras.callbacks.ReduceLROnPlateau`:
+
+```py
+lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=5)
+```
