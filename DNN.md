@@ -397,3 +397,160 @@ Podemos usar el callback `keras.callbacks.ReduceLROnPlateau`:
 ```py
 lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=5)
 ```
+
+# 4. Overfitting
+
+Para evitar el overfittig tenemos diferentes herramientas:
+- Regularización
+- Dropout
+
+## 4.1 Regularización
+
+Con la regularización "estimulamos" a la DNN para que mantenga la norma de los pesos pequeña. Para ello las capas con regularización introducen un _loss_ que se añade al coste de la red, y que se utiliza durante el entrenamiento. En Keras podemos implementarlo como sigue:
+
+```py
+layer = keras.layers.Dense(100, activation="elu", kernel_initializer="he_normal", kernel_regularizer=keras.regularizers.l2(0.01))
+```
+
+```py
+layer = keras.layers.Dense(100, activation="elu", kernel_initializer="he_normal", kernel_regularizer=keras.regularizers.l1(0.01))
+```
+
+```py
+layer = keras.layers.Dense(100, activation="elu", kernel_initializer="he_normal", kernel_regularizer=keras.regularizers.l1_l2(0.01))
+```
+
+Para evitar tener que repetir el código multiples veces, podemos usar `partial`:
+
+```py
+from functools import partial
+
+RegularizedDense = partial(keras.layers.Dense,activation="elu",kernel_initializer="he_normal",kernel_regularizer=keras.regularizers.l2(0.01))
+
+model = keras.models.Sequential([
+keras.layers.Flatten(input_shape=[28, 28]),
+RegularizedDense(300),
+RegularizedDense(100),
+RegularizedDense(10, activation="softmax",
+kernel_initializer="glorot_uniform")
+])
+```
+
+Con `partial` podemos derivar una función a partir de otra, especificando una serie de parámetros de modo que la función resultante es una especialización de la primera.
+
+## 4.2 Dropout
+
+Otro método eficaz para evitar el overfitting es usar dropout. Con esta técnica lo que hacemos es de forma aleatoria "desconectar" neuronas de la entrada o de capas intermedias - nunca de la salida -, de modo que efectivamente cuando entrenamos la DNN realmente estamos __en cada step__ una red diferente.
+
+En Keras se implementa como sigue, apenas indicando la probabilidad de dropout:
+
+```py
+model = keras.models.Sequential([
+keras.layers.Flatten(input_shape=[28, 28]),
+
+keras.layers.Dropout(rate=0.2),
+
+keras.layers.Dense(300, activation="elu", kernel_initializer="he_normal"),
+
+keras.layers.Dropout(rate=0.2),
+
+keras.layers.Dense(100, activation="elu", kernel_initializer="he_normal"),
+
+keras.layers.Dropout(rate=0.2),
+
+keras.layers.Dense(10, activation="softmax")
+])
+```
+
+Indicar que en inferencia no se usara el Dropout. Esto significa que la DNN tiene que compensar por la falta "de intensidad". Por ejemplo, si en training el dropout rate era 50%, significa que a las salidas se activan con un 50% de las entradas, de media. Si en inferencia usaramos el modelo sin más, estaría recibiendo el donde de "intensidad", por eso hay que compensar en tiempo de inferencia, bien multiplicando los pesos por *1-p*, o dividiendo las salidas por *1-p*, donde *p* es la tasa de dropout - 0.5 en este ejemplo.
+
+Cuando el modelo haga overfitting, __incrementaremos el dropout rate__, cuando haga underfittimg, __reduciremos el dropout rate__.
+
+### 4.2.1 Alphadropout
+
+Alphadropout es una variante de Dropout en la que se mantienen la media y std-dev. Tipicamente se usara junto con la activación *SElu*
+
+```py
+model = keras.models.Sequential([
+    keras.layers.Flatten(input_shape=[28, 28]),
+
+    keras.layers.AlphaDropout(rate=0.2),
+
+    keras.layers.Dense(300, activation="selu", kernel_initializer="lecun_normal"),
+
+    keras.layers.AlphaDropout(rate=0.2),
+
+    keras.layers.Dense(100, activation="selu", kernel_initializer="lecun_normal"),
+
+    keras.layers.AlphaDropout(rate=0.2),
+
+    keras.layers.Dense(10, activation="softmax")
+])
+```
+
+### 4.2.2 Monte-Carlo (MC) Dropout
+
+Con esta técnica lo que vamos a hacer es aplicar dropout durante la inferencia, ejecutar la inferencia un número determinado de veces - 100 en el ejemplo que sigue -, y tomar el valor medio con resultado de la inferencia:
+
+```py
+with keras.backend.learning_phase_scope(1): # force training mode = dropout on
+    y_probas = np.stack([model.predict(X_test_scaled) for sample in range(100)])
+    y_proba = y_probas.mean(axis=0)
+    y_std = y_probas.std(axis=0)
+```
+
+Es equivalente a:
+
+```py
+y_probas = np.stack([model(X_test_scaled, training=True)
+                     for sample in range(100)])
+y_proba = y_probas.mean(axis=0)
+y_std = y_probas.std(axis=0)
+```
+
+Si tomamos una de las respuestas:
+
+```py
+np.round(model.predict(X_test_scaled[:1]), 2)
+
+array([[0. , 0. , 0. , 0. , 0. , 0. , 0. , 0.01, 0. , 0.99]], dtype=float32)
+```
+
+Sin embargo al ver el conjunto de respuestas de la emulación Montecarlo, no está tan claro que el dato sea de clase 9, hay una cierta varianza:
+
+```py
+np.round(y_probas[:, :1], 2)
+
+array([[[0. , 0. , 0. , 0. , 0. , 0.14, 0. , 0.17, 0. , 0.68]],
+[[0. , 0. , 0. , 0. , 0. , 0.16, 0. , 0.2 , 0. , 0.64]],
+[[0. , 0. , 0. , 0. , 0. , 0.02, 0. , 0.01, 0. , 0.97]],
+[...]
+```
+
+La precisión del modelo es mayor cuando aplicamos Montecarlo.
+
+### 4.2.3 Emular Training
+
+Podemos indicar a Keras que trabaje en modo *training* durante la fase de *inferencia* usando `keras.backend.learning_phase_scope(1)`, como en este ejemplo:
+
+```py
+with keras.backend.learning_phase_scope(1): # force training mode = dropout on
+    y_probas=model.predict(X_test_scaled)
+```
+
+Otra forma de aplicar Dropout durante la inferencia, especialmente util cuando hay otras capas en el DNN que tienen un comportamiento diferente en modo entrenamiento y en modo inferencia (batch normalization) es el de crear una capa custom:
+
+```py
+class MCDropout(keras.layers.Dropout):
+    def call(self, inputs):
+        return super().call(inputs, training=True)
+```
+
+## 4.3 Max-Norm Regularization
+
+Con este método lo que hacemos es un cliping del peso:
+
+```py
+keras.layers.Dense(100, activation="elu", kernel_initializer="he_normal",
+kernel_constraint=keras.constraints.max_norm(1.))
+```
