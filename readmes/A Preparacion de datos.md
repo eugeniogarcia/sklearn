@@ -1,5 +1,13 @@
 # Preparación de datos
 
+Vamos a ver una serie de técnicas:
+
+- Estratificar datos
+- Rellenar huecos
+- Tratar datos categóricos
+- Normalizar los datos
+
+Y finalmente veremos como poder crear _pipelines_ que convinen varios de estos pasos y los apliquen como un todo.
 ## Estratificar datos
 
 ### StratifiedShuffleSplit
