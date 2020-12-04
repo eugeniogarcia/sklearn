@@ -41,9 +41,13 @@ mean_absolute_error(y_true, y_pred)
 
 ## cross_val_score
 
+NOTA: Con _cross_validation_score_ tenemos un hibrido. Por un lado lo que estamos haciendo es adiestrar un modelo, y por otro lado, una vez adiestrado recuperamos su score. El asunto es que el modelo no se adiestra de cualquier forma, se hacen K adiestramientos __independientes__, como podemos ver en la implementación custom que veremos abajo, cuando se usa _clone_, y obtenemos la calidad _conjunta_ de los K modelos.
+
 Dividimos el dataset en K bloques. Usamos K-1 para adiestrar el modelo, y el último bloque para evaluarlo. Hacemos esta operación K veces, eligiendo en cada ocasión un bloque diferente para la evaluación. La precisión del modelo será la media de las K precisiones evaluadas.
 
 Este método requiere que pasemos como argumento el modelo que debe ser entrenado, así como la serie de datos.
+
+Podemos usar diferentes KPI para medir. En este ejemplo usamos el _error cuadrático medio_. Los modelos de scoring disponibles dependen del modelo elegido:
 
 ```py
 from sklearn.model_selection import cross_val_score
@@ -95,6 +99,11 @@ for train_index, test_index in skfolds.split(X_train, y_train_5):
 	n_correct = sum(y_pred == y_test_fold)
 	print(n_correct / len(y_pred)) # prints 0.9502, 0.96565 and 0.96495
 ```
+
+Puntos a destacar:
+- Repetimos el training y la evaluación K veces
+- En cada interacción se parte de un modelo "limpio". Para ello usamos un clon del modelo en cada interacción
+- El scoring puede ser cualquiera. En este caso usamos el desvio 
 ## accuracy_score
 
 Precisión del modelo:
@@ -112,7 +121,7 @@ accuracy_score(y_test, y_pred))
 
 ## Confusion Matrix (Clasificación Binaria)
 
-Para calcular la Confusion Matrix necesitamos un conjunto de predicciones junto con sus valores reales. Para obtener las predicciones usamos __cross_val_predict__:
+Para calcular la Confusion Matrix necesitamos un conjunto de predicciones junto con sus valores reales. Para obtener las predicciones usamos __cross_val_predict__ - como podríamos haber usado cualquier otro clasificador:
 
 ```py
 from sklearn.model_selection import cross_val_predict
@@ -128,6 +137,26 @@ from sklearn.metrics import confusion_matrix
 confusion_matrix(y_train_5, y_train_pred)
 
 array([[53057, 1522],[1325, 4096]])
+```
+
+En la matriz tendremos
+
+```
+[[TN FP],[FN, TP]]
+```
+
+Cada columna evalua una categóría. Por ejemplo, la primera esta evaluando los _Nagatives_. Con esto podemos definir las siguientes métricas:
+
+```
+Precision = TP / ( TP + FP)
+```
+
+```
+recall = TP / (TP + FN)
+```
+
+```
+F1 = 1 / ((1 / precision) + (1 / recall))
 ```
 
 ### Precision
@@ -161,7 +190,7 @@ f1_score(y_train_5, y_train_pred)
 
 En ocasiones podemos estar interesados en mejorar la precision del modelo - por ejemplo, si estamos clasificando videos violentos, queremos que cuando estemos tratando un video violento lo clasifiquemos bien -, otras veces el recall del modelo - por ejemplo, si estamos clasificando videos violentos, queremos que cuando estemos tratando un video no violento lo clasifiquemos bien. Lo que no podemos es mejorar ambas métricas, mejorar una se hará a expensas de la otra.
 
-El clasificador utiliza un threshold. Por defecto el threshold es cero. Pomdemos ver como cambian el precision y el recall con el threshold: 
+El clasificador utiliza un threshold por defecto que no podemos manipular. Este threshold determina cual es el balance de precision vs recall que estamos usando. Por defecto el threshold es cero. 
 
 ```py
 from sklearn.metrics import precision_recall_curve
@@ -169,7 +198,21 @@ from sklearn.metrics import precision_recall_curve
 precisions, recalls, thresholds = precision_recall_curve(y_train_5, y_scores)
 ```
 
-Si queremos ver que threshold que nos dara una precision del 90%:
+Si bien no podemos cambiar el threshold directamente, podemos usar la _decision_function_ para aplicar el threshold que nos interese. Aquí por ejemplo vemos como hacerlo:
+
+```py
+y_scores = sgd_clf.decision_function([some_digit])
+
+y_scores
+array([2412.53175101])
+
+threshold = 0
+y_some_digit_pred = (y_scores > threshold)
+
+array([ True])
+```
+
+Pomdemos ver como cambian el precision y el recall con el threshold. Si queremos ver que threshold que nos dara una precision del 90%:
 
 ```py
 threshold_90_precision = thresholds[np.argmax(precisions >= 0.90)]
