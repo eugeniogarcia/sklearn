@@ -74,7 +74,7 @@ clf.predict_proba([[5, 1.5]])
 
 ## Regresión (DecisionTreeRegressor)
 
-Con __DecisionTreeRegressor__ podemos crear un árbol para hacer la regresión. Es un mecanismo muy parecido al usado en el _DecisionTreeClassifier_. La diferencia es que a los nodos no se les asocia una clase sino un valor. En lugar de optimizar el gini/entropía, lo que optimizaremos con cada división es el MSE.
+Con __DecisionTreeRegressor__ podemos crear un árbol para hacer la regresión. Es un mecanismo muy parecido al usado en el _DecisionTreeClassifier_. La diferencia es que a los nodos no se les asocia una clase sino un valor. __En lugar de optimizar el gini/entropía, lo que optimizaremos con cada división es el MSE__.
 
 Los parámetros disponibles son los mismos que en el _DecisionTreeClassifier_, con la excepción de:
 
