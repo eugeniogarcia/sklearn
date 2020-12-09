@@ -1,8 +1,52 @@
 # 1 Clasificadores
 
-## 1.1 Logistic Regression (binario y multi-class)
+## 1.1 Multi-Class Estrategias
 
-Usamos este método para clasificar. Por un lado el modelo que vamos a estimar aplica una función de activación, la __Logistic function__ _( 1/(1+e^-x)_ al resultado del modelo lineal.
+Cuando se trata hacer una clasificación multi-class con SGD o con SVM, podemos forzar a que se siga una estratágia OvO o OvR utilizando estos wrappers:
+- OneVsOneClassifier
+- OneVsRestClassifier
+
+### 1.1.1 OneVsOneClassifier
+
+Podemos forzar a que se utilice la estratégia OvO con el siguiente modelo. Con esta estrategia se crea un modelo para cada pareja. Si tenemos N clases, N * (N-1) / 2 modelos. Si tuvieramos 10 clases, el total de modelo serán 45:
+
+```py
+from sklearn.multiclass import OneVsOneClassifier
+
+ovo_clf = OneVsOneClassifier(SGDClassifier(random_state=42))
+
+fit(X_train, y_train)
+
+predict([some_digit])
+array[5], dtype=uint8)
+
+len(ovo_clf.estimators_)
+45
+```
+
+Si bien el número de modelos se incrementa, cada modelo se adiestra con un subconjunto del total.
+
+### 1.1.2 OneVsRestClassifier
+
+Podemos forzar a que se utilice la estratégia OvR con el siguiente modelo. Con esta estrategia se crea un modelo para cada clase. Si tenemos N clases, N modelos. Si tuvieramos 10 clases, el total de modelo serán 10:
+
+```py
+from sklearn.multiclass import OneVsRestClassifier
+
+ovr_clf = OneVsRestClassifier(SGDClassifier(random_state=42))
+
+ovr_clf.fit(X_train, y_train)
+
+ovr_clf.predict([some_digit])
+array([5], dtype=uint8)
+
+len(ovr_clf.estimators_)
+10
+```
+
+## 1.2 Logistic Regression (binario y multi-class)
+
+Usamos este método para clasificar. Por un lado el modelo que vamos a estimar aplica una función de activación, la __Logistic function__ _( 1/(1+e^-x)_ al resultado del modelo lineal. El algoritmo de optimización que se usa es batch gradient descent.
 
 El algoritmo se puede usar en problemas de clasificación binaría y en multi-class. En caso de que la clasificación sea binaria, la función de coste es la __log loss__ _(-y*log(p)-(1-y)*log(1-p))_.
 
@@ -36,7 +80,7 @@ No hay una solución matemática que resuelva este problema de optimización, as
 
 Los algoritmos 'newton-cg', 'sag', y 'lbfgs' admiten solo la regularización 'l2' - o trabajar sin regularización. El algoritmo 'liblinear' admite tanto 'l1' como 'l2'.Elastic-Net solo se admite con el algoritmo 'saga'.
 
-### 1.1.1 Clasificación Binaria
+### 1.2.1 Clasificación Binaria
 
 Notese que el método es __predict_proba__. Usamos los valores por defecto
 
@@ -53,7 +97,7 @@ log_reg.predict_proba(X)
 log_reg.classes_
 ```
 
-### 1.1.2 Multi-class (softmax)
+### 1.2.2 Multi-class (softmax)
 
 Notese que el método es __predict_proba__. Indicamos que se trata de un caso multi-class, y al elegir _multinomial_ estamos usando softmax:
 
@@ -71,7 +115,7 @@ array([[6.38014896e-07, 5.74929995e-02, 9.42506362e-01]])
 log_reg.classes_
 ```
 
-### 1.1.3 Multi-class (ovr)
+### 1.2.3 Multi-class (ovr)
 
 Notese que el método es __predict_proba__. Como _y_ tiene varias clases, y no especificamos nada en _multinomial_, aplicará el valor por defecto, 'ovr':
 
@@ -89,9 +133,23 @@ array([[6.38014896e-07, 5.74929995e-02, 9.42506362e-01]])
 log_reg.classes_
 ```
 
-## 1.2 Stocastic Gradient Descent (SGD) (binario y multi-class)
+## 1.3 Stocastic Gradient Descent (SGD) (binario y multi-class)
 
-Por defecto utiliza una función de coste __hinge__, _y = max(0, 1-t * y)_, para definir el clasificador.
+En estos métodos usaremos lo que pretendemos es, como el logistic regression, determinar la probilidad de que una instancia perteneza a una determinada clase - binaria - o clases. Para determinar esta probabilidad usamos una función de coste y la optimización la hacemos usando SGD, en lugar del Batch Gradient Descent que empleamos en la Logistic Regression. La función de coste no está basada en la entropía - de la información; Claude Shannon. Por defecto utiliza una función de coste __[hinge](https://en.wikipedia.org/wiki/Hinge_loss)__, para definir el clasificador. Hinge se define como:
+
+```
+Si cada instancia puede clasificarse como +1 o -1, y denominamos _t_ como se clasifica la instancia, e _y_ la predicción del clasificador, la funcion de coste hinge se define como:
+
+y = max(0, 1 - t * y)
+```
+
+Otra función de coste que se usa en ocasiones es __[huber](https://en.wikipedia.org/wiki/Huber_loss)__. Huber usa un hibrido de L2 y L1 para medir los errores. La idea es que cuando los errores sean pequeños se use L2, y cuando sea grandes L1. Un parametros determina el umbral a partir del cual se usa L2 o L1:
+
+```
+loss = 1/2 * err^2  si |err| < epsilon
+
+loss = epsilon * (|err|- 1/2 * epsilon)  si err >= epsilon
+```
 
 Se configura con los siguientes parámetros:
 
@@ -111,7 +169,7 @@ Se configura con los siguientes parámetros:
 			- 'huber'. Es una función cuadratica para errores menores a un umbral, y lineal para errores mayores
 			- 'epsilon_insensitive'
 			- 'squared_epsilon_insensitive'
-	- __epsilon__. El valor de epsilon. Por defecto es 0.1. Se utiliza en 'huber', 'epsilon_insensitive', y 'squared_epsilon_insensitive'. En el caso de 'huber', determina el umbral a partir del cual no es tan importante que la predicción sea correcta. Para 'epsilon-insensitive', cualquier diferencia entre la predicción actual y la correcta - según la etiqueta -, es ignorada si es inferior a este threshold.
+	- __epsilon__. El valor de epsilon. Por defecto es 0.1. Se utiliza en __'huber'__, 'epsilon_insensitive', y 'squared_epsilon_insensitive'. En el caso de 'huber', determina el umbral a partir del cual no es tan importante que la predicción sea correcta. Para 'epsilon-insensitive', cualquier diferencia entre la predicción actual y la correcta - según la etiqueta -, es ignorada si es inferior a este threshold.
 	- __penalty__. Regularización a utilizar. Por defecto se usa _l2_
 		- 'l2'
 		- 'l1'
@@ -134,7 +192,7 @@ Se configura con los siguientes parámetros:
 	- __validation_fraction__. Por defecto 0.1. Proporción de los datos que se apartarán para validar el error en el caso de _early stopping_. Solo se usa si _early_stopping_ es True
 
 
-### 1.2.1 Binario
+### 1.3.1 Binario
 
 ```py
 from sklearn.linear_model import SGDClassifier
@@ -147,9 +205,9 @@ sgd_clf.predict([some_digit])
 array([ True])
 ```
 
-### 1.2.2 Multi-class
+### 1.3.2 Multi-class
 
-Cuando y_train tiene más de una clases, el SGDClassifier automáticamente trabaja en modo multi-class, creando un clasificador para cada una de las clases, y retornando aquella clase en la que el threshold resulto ser más alto. Esto es lo que se denomina Uno contra Todo, o OvR (One vs Rest).
+Cuando y_train tiene más de una clases, el SGDClassifier __automáticamente trabaja en modo multi-class__, creando un clasificador para cada una de las clases, y retornando aquella clase en la que el threshold resulto ser más alto. __Esto es lo que se denomina Uno contra Todo, o OvR (One vs Rest)__.
 
 En este ejemplo lo podemos ver. El vector de training en lugar de tener True, False, tiene varias posibles valores, clases, y al hacer la predicción retorna un valor concreto, 5 en el ejemplo:
 
@@ -177,14 +235,20 @@ array([[-15955.22627845, -38080.96296175, -13326.66694897,
 -10631.35888549]])
 ```
 
-## 1.3 Support Vector Machine (SVM) (binario y multi-class)
+## 1.4 Support Vector Machine (SVM) (binario y multi-class)
 
-### 1.3.1 Datasets separables de forma lineal (LinearSVC)
+Con esta técnica el objetivo es encontrar un modelo que establece una separación más drastica entre las instancias a clasificar, que es lo más ortogonal posible - el vector que determina el gradiente de cambio entre los dos colectivos, sera el que defina la superficie de separación entre los colectivos. Con estos modelos se introduce también el concepto de ancho en la separación. Cuanto mayor es el ancho mejor es la capacidad para generalizar del modelo, pero más dificil será encontrar una solución, y quizás tengamos que admitir algunos errores en la clasificación. El parametro que se usa para balancear la capacidad de generalizar con el rigor de la clasificación es comumente referido como __C__. Cuanto más pequeño sea _C_ más genérico es el modelo.
+
+El modelo se puede entrenar usando varias funciones de coste, entre ellas la _hinge_ que hemos visto antes, y una función lineal.
+
+Este modelo no se basa en la estimación de probabilidades sino que busca la separación geométrica, con rectas, curvas, superficies,... que separe los diferentes grupos de datos, con la mayor separación posible entre ellos.
+
+### 1.4.1 Datasets separables de forma lineal (LinearSVC)
 
 El modelo se puede configurar con los siguientes parámetros:
 
 - __loss__. función de error a optimizar. Por defecto es 'squared_hinge'. Otras opciones son:
-	- 'hinge'. _y = max(0, 1-t * y)_
+	- 'hinge'. _y = max(0, 1 - t * y)_
 	- 'squared_hinge'. Cuadrado de la función 'hinge'
 - __penalty__. Regularización a utilizar. Por defecto se usa _l2_
 	- 'l2'
@@ -231,11 +295,11 @@ Podemos usa otros modelos como alternativa a LinearSVC:
 	SGDClassifier(loss="hinge",alpha=1/(m*C))
 	```
 	
-### 1.3.2 Datasets NO separables de forma lineal 
+### 1.4.2 Datasets NO separables de forma lineal 
 
-#### 1.3.2.1 Usar Polynomial Regresion + LinearSVC
+#### 1.4.2.1 Usar Polynomial Regresion + LinearSVC
 
-Usamos la misma táctica que ya vimos para reutilizar la regresión lineal en problemas polinómicos. Calculamos series con las potencias de las features. Cuando Mayor sea el grado que elijamos mayor será el número de features que se calcularan. Esto hace que el método resulte prohibitivo cuando la potencia sea alta.
+Usamos la misma táctica que ya vimos para reutilizar la regresión lineal en problemas polinómicos. Lo que haremos es crear features que representan las potencias de las features disponibles, de modo que calculemos un modelo lineal que use estas features sintéticas. Cuando Mayor sea el grado que elijamos mayor será el número de features que se calcularan. Esto hace que el método resulte prohibitivo cuando la potencia sea alta.
 
 Veamos con un pipeline de ejemplo como sería. En esencia no cambia nada con respecto al caso de clasificación lineal.
 
@@ -247,14 +311,13 @@ from sklearn.preprocessing import PolynomialFeatures
 polynomial_svm_clf = Pipeline([("poly_features", PolynomialFeatures(degree=3)),("scaler", StandardScaler()),("svm_clf", LinearSVC(C=10, loss="hinge"))])
 
 polynomial_svm_clf.fit(X, y)
-
 ```
 
-#### 1.3.2.2 Usar Polynomial Kernel (SVC)
+#### 1.4.2.2 Usar Polynomial Kernel (SVC)
 
 El método anterior deja de ser práctico a medida que vamos subiendo el grado de la potencia. El algoritmo que usamos con este modelo esta basado en _libsvm_. La complejidad del entrenamiento es _O(n*2)_ con el número de muestras. Por este motivo para datasets grandes es aconsejable usar el _LinearSVC_ o el _SGDClassifier_.
 
-Los Kernels son una feature que tenemos disponible en el modelo __SVC__. El [Kernel](https://scikit-learn.org/stable/modules/svm.html#svm-kernels) es una función que nos permite definir la distancia entre dos puntos. Aplicaremos un kernel sobre los datos, y los datos que resultan, una vez el kernel se ha aplicado sobre ellos, serán separables linealmente. Seran estos datos transformados los que clasifiquemos. Esta es la idea.
+Los Kernels son una capacidad que tenemos disponible en el modelo __SVC__. El [Kernel](https://scikit-learn.org/stable/modules/svm.html#svm-kernels) es una función que nos permite definir la distancia entre dos puntos. __Aplicaremos un kernel sobre los datos, y los datos que resultan, una vez el kernel se ha aplicado sobre ellos, serán separables linealmente__. Seran estos datos transformados los que clasifiquemos. Esta es la idea.
 
 __SVC__ sigue una estratégia __OvO__ cuando el problema de clasificación sea __multi-class__.
 
@@ -288,59 +351,17 @@ poly_kernel_svm_clf = Pipeline([("scaler", StandardScaler()),("svm_clf", SVC(ker
 poly_kernel_svm_clf.fit(X, y)
 ```
 
-## 1.4 Multi-Class Estrategias
-
-Cuando se trata hacer una clasificación multi-class con SGD o con SVM, podemos forzar a que se siga una estratágia OvO o OvR utilizando estos wrappers:
-- OneVsOneClassifier
-- OneVsRestClassifier
-
-### 1.4.1 OneVsOneClassifier
-
-Podemos forzar a que se utilice la estratégia OvO con el siguiente modelo. Con esta estrategia se crea un modelo para cada pareja. Si tenemos N clases, N * (N-1) / 2 modelos. Si tuvieramos 10 clases, el total de modelo serán 45:
-
-```py
-from sklearn.multiclass import OneVsOneClassifier
-
-ovo_clf = OneVsOneClassifier(SGDClassifier(random_state=42))
-
-fit(X_train, y_train)
-
-predict([some_digit])
-array[5], dtype=uint8)
-
-len(ovo_clf.estimators_)
-45
-```
-
-Si bien el número de modelos se incrementa, cada modelo se adiestra con un subconjunto del total.
-
-### 1.4.2 OneVsRestClassifier
-
-Podemos forzar a que se utilice la estratégia OvR con el siguiente modelo. Con esta estrategia se crea un modelo para cada clase. Si tenemos N clases, N modelos. Si tuvieramos 10 clases, el total de modelo serán 10:
-
-```py
-from sklearn.multiclass import OneVsRestClassifier
-
-ovr_clf = OneVsRestClassifier(SGDClassifier(random_state=42))
-
-ovr_clf.fit(X_train, y_train)
-
-ovr_clf.predict([some_digit])
-array([5], dtype=uint8)
-
-len(ovr_clf.estimators_)
-10
-```
-
 ## 1.5 Ensemble Learning
 
-Podemos usar varios clasificadores y combinar sus resultados en un ensemble. El resultado del ensemble será tanto mejor como más independientes entre si sean los clasificadores que usamos. Podemos fomentar la independencia entre los clasificadores de dos maneras:
-- Usando diferentes tipos de clasificadores. De esta forma será dificil que compartan datos intermedios
-- Usando diferentes juegos de datos para entrenar cada clasificador
+Podemos __usar varios clasificadores y combinar__ sus resultados en un ensemble. El resultado del ensemble será tanto mejor como más independientes entre si sean los clasificadores que usamos. Podemos fomentar la independencia entre los clasificadores de dos maneras:
+
+- Usando __diferentes tipos__ de clasificadores. De esta forma será dificil que compartan datos intermedios
+- Usando __diferentes juegos de datos__ para entrenar cada clasificador
 
 La forma en que combinamos los resultados de los clasificadores intermedios pude hacerse de dos formas:
-- hard. Tomamos como clasificación el voto mayoritarío
-- soft. En aquellos casos en los que los clasificadores intermedios retornen una probabilidad - los predictores tengan un método _predict_proba_ -, podemos usar la probabilidad estimada en cada clasificador para calcular la probabilidad del conjunto
+
+- __hard__. Tomamos como resultado de la clasificación la del voto mayoritarío
+- __soft__. En aquellos casos en los que los clasificadores intermedios retornen una probabilidad - es decir, los predictores tengan un método _predict_proba_ -, podemos usar la probabilidad estimada en cada clasificador para calcular la probabilidad del conjunto
 
 ### 1.5.1 Diversidad usando diferentes modelos
 
@@ -401,7 +422,7 @@ voting_clf.fit(X_train, y_train)
 
 Para conseguir diversidad usando el mismo tipo de clasificador, lo que tendremos que hacer es entrenar cada clasificador con datos diferentes. De esta forma conseguimos la "independencia" que hará que el ensemble se comporte mejor.
 
-Los datos se eligen al azar. Podemos controlar si el mismo dato se usa en varios clasificadores, _bootstrap=True_, o si un dato solo se utiliza en un controlador _bootstrap=False_.
+Los datos se eligen al azar. Podemos controlar __si el mismo dato se usa en varios clasificadores__, **_bootstrap=True_**, o si un dato solo se utiliza en un controlador _bootstrap=False_.
 
 En este ejemplo estamos diciendo que se usen 500 clasificadores, y que cada clasificador se entrene con un máximo de 100 datos - elegidos al azar:
 
@@ -440,6 +461,7 @@ array([[0.31746032, 0.68253968],
 ```
 
 Podemos ver con *oob_decision_function_* la decisión que se tomo con cada registro.
+
 ### 1.5.3 Random Subspaces
 
 De la misma forma que podemos conseguir diversidad alimentando diferentes juegos de datos a diferentes clasificadores, podemos trocear las features, de modo que no alimentemos a todos los clasificadores con las mismas features. Esto puede ser interesante en casos en los que haya muchas dimensiones.
@@ -447,6 +469,7 @@ De la misma forma que podemos conseguir diversidad alimentando diferentes juegos
 Para configurar estos subspaces hay dos hiper-parámetros muy parecidos a los que hemos usado para elegir aleatoriamente los datos:
 - max_features. Define cuantas features se encargará de gestionar cada clasificador 
 - bootstrap_features. Define si la misma feature puede o no usarse en más de un clasificador - y si habrá features que pudieran no usarse en absoluto
+
 ### 1.5.4 Random Forests
 
 Es un caso particular de ensemble, en el que el clasificador son Decission Trees, y se usa _bootstrap=True_.
@@ -467,7 +490,7 @@ bag_clf = BaggingClassifier(DecisionTreeClassifier(splitter="random", max_leaf_n
 
 Digo viene porque _RandomForestClassifier_ introduce algunas optimizaciones sobre la forma general de crear ensembles.
 
-### 1.5.5 Importancia de cada Feature
+### 1.5.4.1 Importancia de cada Feature
 
 Podemos evaluar la importancia de cada feature en el decission tree. La importancia se mide evaluando el efecto que la feature tiene en la reducción del gini/entropía en el arbol. Esta información está accesible en **feature_importances_**:
 

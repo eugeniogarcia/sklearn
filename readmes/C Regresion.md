@@ -88,7 +88,7 @@ Se configura con los siguientes parámetros:
 		- 'huber'. modifica 'squared_loss' para fozalizarse menos en los outliers. Cuando la distancia supera un determinado valor, epsilon, en lugar de usar norma 2, cuadrática, usara norma 1
 		- 'epsilon_insensitive'. Ignora aquellos errores que sean menores que epsilon, y usa una norma 1 para los errores que sean mayores que epsilon
 		- 'squared_epsilon_insensitive'. Ignora aquellos errores que sean menores que epsilon, y usa una norma 2 para los errores que sean mayores que epsilon
-	- __epsilon__. El valor de epsilon. Por defecto es 0.1
+	- __epsilon__. El valor de epsilon. Por defecto es 0.1. Se utiliza en ciertas funciones de error, como huber.
 	- __penalty__. Regularización a utilizar. Por defecto se usa _l2_
 		- 'l2'
 		- 'l1'
@@ -181,7 +181,7 @@ polynomial_regression.predict(X)
 
 ## 1.4 Support Vector Machines
 
-SVR se utilizan fundamentalmente para clasificar, pero también podemos usarlos para resolver problemas de regresión. La idea aquí es la inversa a la del problema de clasificación, esto es, buscar que todos los puntos entren dentro de el margen de tolerancia, de nuestra "calle", y que este margen de tolerancia sea lo más pequeño posible.
+__Los SVR se utilizan fundamentalmente para clasificar__, pero también podemos usarlos para resolver problemas de regresión. La idea aquí es la inversa a la del problema de clasificación, esto es, buscar que todos los puntos entren dentro de el margen de tolerancia, de nuestra "calle", __y que este margen de tolerancia sea lo más pequeño posible__.
 
 ```py
 from sklearn.svm import LinearSVR

@@ -1,13 +1,47 @@
 # Decission Trees
 
+Los árboles de decisión son árboles binarios que permiten clasificar los datos en una u otra categoría. El árbol se construye desde un nodo _raíz_ que se va bifurcando hasta llegar a nodos _hoja_. En cada nodo tenemos una serie de parámetros:
+- Número total de instancias que se han clasificado por debajo de él. Llamemoslas _m_
+- KPI de pureza del nodo - típicamente medida con la función __gini__. Determina cuan puro es el nodo. Un nodo _hoja_ será aquél para el que no podemos dividir las _m_ instancias en dos grupos con un gini menor
+- La distribución de las _m_ instancias en las distintas clases
+- La clase predominante
+
+Podemos representar gráficamente el árbol asociado a un determinado árbol, `tree_clf`, con `export_graphviz`. 
+
+```py
+from sklearn.tree import export_graphviz
+
+export_graphviz(tree_clf,
+    out_file=image_path("iris_tree.dot"),
+    feature_names=iris.feature_names[2:],
+    class_names=iris.target_names,
+    rounded=True,
+    filled=True
+)
+```
 ## Clasificación (DecisionTreeClassifier)
 
-Podemos usar decission trees para clasificar datos. Para construir el árbol se usa el algoritmo __CART__. El algoritmo procesa los datos dividiendo cada conjunto en dos bloques de forma que se minimice una función de coste que calcula el gini o la entropría. Continuarán dividiendose los datos hasta que se alcance el nivel más profundo, o no se consiga mejorar el gini/entropía con una división adicional.
+Podemos usar decission trees para clasificar datos. Para construir el árbol se usa el algoritmo __CART__. El algoritmo procesa los datos dividiendo cada conjunto en dos bloques de forma que se minimice una función de coste que calcula el __gini__ o la __entropría__. El algoritmo divide de forma recursiva las instancias hasta que se alcance el nivel más profundo - no se pueda devidir más las instancias, o no se consiga mejorar el gini/entropía con una división adicional.
 
-Este tipo de algoritmos van a producir on over-fit a menos que restrinjamos el universo de exploración. Para hacer esta restricción usamos los hiper-parámetros del modelo:
+El gini se mide como:
 
-- __criterion__. Por defecto 'gini'. También se admite 'entropy'
-- __splitter__. Por defecto 'best'. Admite 'best' y ' random'. Con este parámetro definimos la estratégia a seguir para dividir cada nodo. Con best es un greedy algorithm. Con random introducimos la posibilidad de explorar 
+```
+gini = 1 - suma ( prob_clase_i ) = 1 - suma ( num_inst_clase_i / num_tot_inst )
+```
+
+Cuando hacemos una división, el Gini resultante de la división se calcula como sigue:
+
+```
+Gini_division = Gini_left * (num_int_left / num_tot_inst) + Gini_right * (num_int_right / 
+num_tot_inst)
+```
+
+Si tenemos un nodo con un _num_tot_inst_ y un gini _G_, y podemos dividir las instancias en dos grupos que dan lugar a un _Gini_division_ < _G_, entonces procedemos a la división. Sino es así, el nodo será un nodo _hoja_.
+
+Este tipo de algoritmos van a producir on over-fit a menos que restrinjamos el universo de exploración - eventualmente podríamos tener tantas hojas como instancias. Para hacer esta restricción usamos los hiper-parámetros del modelo:
+
+- __criterion__. Por defecto `gini`. También se admite `entropy`
+- __splitter__. Por defecto 'best'. Admite `best` y `random`. Con este parámetro definimos la estratégia a seguir para dividir cada nodo. Con _best_ es un __greedy algorithm__. Con _random_ introducimos la posibilidad de __explorar__ 
 - __max_depth__. Por defecto None. Determina la máxima profundidad del árbol
 - __min_samples_split__. Por defecto 2. Valor mínimo de muestras que se requieren para que un nodo se pueda dividir en dos. Sino se supera el valor mínimo, el nodo se convertirá en _leaf_. Si se informase un decimal en lugar de un entero, el número mínimo de muestras para poder dividir un nodo se calculará como _ceil(min_samples_split * n_samples)_
 - __min_samples_leaf__. Por defecto 1. Mínimo número de muestras que se requieren en un nodo para que se le considere _leaf_. Para poder hacer una división, en cualquier nivel del árbol, los nodos resultantes a derecha e izquierda tienen que tener al menos este número de muestras. Si se informase un decimal en lugar de un entero, el número mínimo de muestras para poder dividir un nodo se calculará como _ceil(min_samples_leaf * n_samples)_
