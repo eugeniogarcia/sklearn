@@ -40,7 +40,7 @@ array([[-2.80037642,  1.30082566],
        [-2.80389616,  1.80117999]])
 ```
 
-Con *transform* lo que obtendremos es la distancia de cada instancia a *cada uno* de los centroides:
+Con *transform* lo que obtendremos es la _distancia_ de cada instancia a *cada uno de los centroides*:
 
 ```py
 X_new = np.array([[0, 2], [3, 2], [-3, 3], [-3, 2.5]])
@@ -53,7 +53,7 @@ array([[2.88633901, 0.32995317, 2.9042344 , 1.49439034, 2.81093633],
        [1.21567622, 3.21806371, 0.36159148, 1.54808703, 0.72581411]])
 ```
 
-Veamos que efectivamente cuando hacemos la predicción, lo que obtenemos es el centroide más cercano:
+Veamos que efectivamente cuando hacemos la *predicción*, lo que obtenemos es el centroide más cercano:
 
 ```py
 kmeans.predict(X_new)
@@ -69,7 +69,7 @@ kmeans.score(X)
 -211.5985372581683
 ```
 
-El score es la inercia con signo negativo. La inercia es la suma de los cuadrados de las distancias de cada instancia al centroide más próximo:
+__El score es la inercia con signo negativo__. La inercia es la suma de los cuadrados de las distancias de cada instancia al centroide más próximo:
 
 ```py
 kmeans.inertia_
@@ -157,10 +157,10 @@ Otra forma de determina el número de centroides es usar el silhouette coefficie
 
 *(b – a) / max(a, b)*
 
-Define la distancia media de una instancia con el resto de instancias del cluster. 
+Define la __distancia media__ de __una instancia con el resto de instancias__ del cluster. 
 
-*a*: distancia media de una instancia con el resto de instancias del cluster
-*b*: Distancia media al cluster más próximo
+*a*: __distancia media__ de una __instancia__ con el __resto de instancias__ del __cluster más próximo__
+*b*: __distancia media__ de una __instancia__ con el __resto de instancias__ del __segundo cluster más próximo__
 
 El silhouette coefficient varía entre -1 y +1. +1 nos indica que las instancias están "bien dentro" de su propio cluster. -1 que las instancias no están bien clasificadas. 0 indicará que están cerca de la frontera del cluster.
 
@@ -226,7 +226,7 @@ pipeline.score(X_test, y_test)
 0.98
 ```
 
-El primer paso transorma (:,64) en (:,50). Cada una de las 50 features es la distancia de la instancia al centroide. El segundo paso clasificará (:,50), calculando las probabilidades de cada una de las categorias.
+El primer paso transforma (:,64) en (:,50). Cada una de las 50 features es la distancia de la instancia al centroide. El segundo paso clasificará (:,50), calculando las probabilidades de cada una de las categorias.
 
 Con este método hemos mejorado la precisión en unos puntos.
 ##### Optimización

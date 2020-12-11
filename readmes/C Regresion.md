@@ -63,6 +63,8 @@ lasso_reg.predict(X_new)
 
 #### Elastic Net
 
+Es un hibrido entre L1 y L2. Con el parametro _l1_ratio_ controlamos cuanto tiene de L1 y cuanto de L2. _alpha_ es el factor que se le aplica al L1 o L2 de los pesos.
+
 ```py
 from sklearn.linear_model import ElasticNet
 
@@ -85,10 +87,10 @@ Se configura con los siguientes parámetros:
 - Función de error:
 	- __loss__. función de error a optimizar. Por defecto es 'squared_loss'. Otras opciones son:
 		- 'squared_loss'
-		- 'huber'. modifica 'squared_loss' para fozalizarse menos en los outliers. Cuando la distancia supera un determinado valor, epsilon, en lugar de usar norma 2, cuadrática, usara norma 1
+		- 'huber'. modifica 'squared_loss' para __focalizarse menos en los outliers__. Cuando la distancia supera un determinado valor, epsilon, en lugar de usar norma 2, cuadrática, usara norma 1
 		- 'epsilon_insensitive'. Ignora aquellos errores que sean menores que epsilon, y usa una norma 1 para los errores que sean mayores que epsilon
 		- 'squared_epsilon_insensitive'. Ignora aquellos errores que sean menores que epsilon, y usa una norma 2 para los errores que sean mayores que epsilon
-	- __epsilon__. El valor de epsilon. Por defecto es 0.1. Se utiliza en ciertas funciones de error, como huber.
+	- __epsilon__. El valor de epsilon. Por defecto es 0.1. Se utiliza en ciertas funciones de error, como __huber__.
 	- __penalty__. Regularización a utilizar. Por defecto se usa _l2_
 		- 'l2'
 		- 'l1'

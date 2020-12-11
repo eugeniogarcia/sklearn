@@ -104,6 +104,7 @@ Puntos a destacar:
 - Repetimos el training y la evaluación K veces
 - En cada interacción se parte de un modelo "limpio". Para ello usamos un clon del modelo en cada interacción
 - El scoring puede ser cualquiera. En este caso usamos el desvio 
+
 ## accuracy_score
 
 Precisión del modelo:

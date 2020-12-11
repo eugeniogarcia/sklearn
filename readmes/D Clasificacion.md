@@ -317,7 +317,7 @@ polynomial_svm_clf.fit(X, y)
 
 El método anterior deja de ser práctico a medida que vamos subiendo el grado de la potencia. El algoritmo que usamos con este modelo esta basado en _libsvm_. La complejidad del entrenamiento es _O(n*2)_ con el número de muestras. Por este motivo para datasets grandes es aconsejable usar el _LinearSVC_ o el _SGDClassifier_.
 
-Los Kernels son una capacidad que tenemos disponible en el modelo __SVC__. El [Kernel](https://scikit-learn.org/stable/modules/svm.html#svm-kernels) es una función que nos permite definir la distancia entre dos puntos. __Aplicaremos un kernel sobre los datos, y los datos que resultan, una vez el kernel se ha aplicado sobre ellos, serán separables linealmente__. Seran estos datos transformados los que clasifiquemos. Esta es la idea.
+Los Kernels son una capacidad que tenemos disponible en el modelo __SVC__. El [Kernel](https://scikit-learn.org/stable/modules/svm.html#svm-kernels) es una función que nos permite __definir la distancia entre dos puntos__. __Aplicaremos un kernel sobre los datos, y los datos que resultan, una vez el kernel se ha aplicado sobre ellos, serán separables linealmente__. Seran estos datos transformados los que clasifiquemos. Esta es la idea.
 
 __SVC__ sigue una estratégia __OvO__ cuando el problema de clasificación sea __multi-class__.
 
