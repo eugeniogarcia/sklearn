@@ -4,16 +4,39 @@ El algoritmo de _backpropagation_ funciona a) navegando desde la capa de salida 
 
 Históricamente se configuraban las capas con pesos aleatorios, que seguían una normal de media 0 y std-dev 1, y usando una activación sigmoidal. Esto provoca dos problemas:
 
-- __Vanishing gradient__. El gradiente en cada capa va haciendose más pequeño a medida que nos acercamos a la entrada. Esto tiene como resultado que los parámetros de esas capas no cambian, no se adiestran, y el algorimo no converge
+- __Vanishing gradient__. El gradiente en cada capa va haciendose más pequeño a medida que _nos acercamos a la entrada_. Esto tiene como resultado que los parámetros de esas capas no cambian, no se adiestran, y el algorimo no converge
 - __Exploding gradient__. A medida que vamos subiendo desde la entrada calculando las salidas, nos sucede lo contraro, que se va ampliando el valor, de modo que las oscilaciones hacen que el algoritmo no converga
 
-La derivada de la función sigmoidal en los extremos tiende a cero, lo que contribuye al vanishing, y al rededor de certo tiene un valor medio de 0.5, lo que contribuye al exploding.
+La _derivada de la función sigmoidal en los extremos tiende a cero_, lo que contribuye al vanishing, y al rededor de cero tiene un valor medio de 0.5, lo que contribuye al exploding.
 
-Un factor que se observa y que explica estos fenómenos, es que la std-dev de los datos que alimentan una capa es menor de la  std-dev de las salidas. Lo que necesitamos para evitar los dos problemas que hemos descrito, es que la std-dev en las entradas y salidas se mantenga con un valor similar tanto cuando navegamos hacia delatante, como cuando vamos hacía atras. En este sentido juega un factor clave el número de entradas y neuronas de cada capa sea igual - *fan-in*, y *fan-out*.
+Un factor que se observa y que explica estos fenómenos, es que __la std-dev de los datos que alimentan una capa es menor de la  std-dev de las salidas__. Lo que __necesitamos__ para evitar los dos problemas que hemos descrito, es que __la std-dev en las entradas y salidas se mantenga con un valor similar__ tanto cuando navegamos hacia delatante, como cuando vamos hacía atras. En este sentido juega un factor clave el número de entradas y neuronas de cada capa sea igual - *fan-in*, y *fan-out*.
 
 ## 1.1 Inicialización de pesos
 
-Lo que observamos es que inicializando los pesos con media 0, pero con una std-dev diferente a 1, consiguimos aumentar la estabilidad del algoritmo. Empiricamente se ha comprobado que según la activación que se use, la std-dev a aplicar a los pesos que resulta más conveniente es - se indica el nombre que se le ha dado a cada uno de estos criterios de inicialización:
+Lo que observamos es que inicializando los pesos con media 0, pero con una std-dev diferente a 1, consiguimos aumentar la estabilidad del algoritmo. Empiricamente se ha comprobado que según la activación que se use, la std-dev a aplicar a los pesos que resulta más conveniente es - se indica el nombre que se le ha dado a cada uno de estos criterios de inicialización. Veamos primero alguna nomenclatura:
+
+```
+fan-in = número de entradas de una capa
+fan-out = número de salidas de una capa
+
+fan-avg= ( fan-in + fan-out ) / 2
+```
+
+Se ha comprobado empiricamente que la std-dev con la que inicializar los pesos conviene 
+
+Si la distribución usada para inicializar los pesos es normal de media 0, que la std-dev sea:
+
+```
+std-dev ^2 = 1 / fan-avg
+```
+
+Si la distribución usada para inicializar los pesos es uniforme, que el valor máximo este entre +r y -r, con:
+
+```
+r = sqrt ( 3 / fan-avg )
+```
+
+Esta forma de inicializar se denomina __Glorot__. Otras formas de inicialización de pesos son - indicamos ´la función de activación; Sobre la función de activació, ver la siguiente sección:
 
 |Inicialización|Activación|std dev|
 |-------|-------|-------|
@@ -23,21 +46,22 @@ Lo que observamos es que inicializando los pesos con media 0, pero con una std-d
 
 ## 1.2 Activaciones
 
-- __Sigmoidal__. Saturación de valores -> vanishing gradient
-- __Relu__. Evita la saturación de valores positivos, pero sufre de dying RELU
+- __Sigmoidal__. Saturación de valores -> _vanishing gradient_
+- __Relu__. Evita la saturación de valores positivos, pero _sufre de dying RELU_
 - __Leaky Relu (LRelu)__. Evita el dying RELU. Mantiene una pendiente constante y pequeña para valores negativos. La pendiente es un parámetro de la LRelu
 - __Randomized Relu (RRelu)__. Similar a la LRelu, pero el parámetro se elije al azar con cada epoch
-- __Parametrized Relu (PRelu)__. Similar a la LRelu, pero el parámetro se "aprende"
-- __Exponencial Linear Unit (ELU)__. Para valores negativos sigue una exponencial que a infinito tiende a el valor del parámetro. El parámetro 
+- __Parametrized Relu (PRelu)__. Similar a la LRelu, pero el parámetro _se aprende_
+- __Exponencial Linear Unit (ELU)__. Para valores negativos sigue una exponencial que a infinito tiende a el valor del parámetro 
 - __Scaled ELU (SELU)__. Como la ELU, pero la salida tiene a preservar que su media sea 0, y la std-dev sea 1
 
 ### 1.2.3 Elección
 
 En orden de preferencia, este sería el criterio de selección de una activación:
+
 ```
 SELU > ELU > LRelu & sus variantes > tanh > logistic
 ```
-Podemo configurar cada escenario en Keras como sigue:
+Podemos configurar cada escenario en Keras como sigue:
 
 - __he__ para inicializar los pesos, pero con una distribución uniforme:
 
@@ -67,25 +91,31 @@ layer = keras.layers.Dense(10, activation="selu",kernel_initializer="lecun_norma
 
 ## 1.3 Batch Normalization
 
-Usando he con Elu o Relu disminuye el problema del vanishing y exploding gradient, normalizar cada una de las capas para que las salidas esten normalizadas, ayudara a reducir el problema.
+Normalizar los pesos y usar una función de activación como las descritas anteriormente ayuda a evitar el problema del vanishing y exploding gradient, pero a medida que el ciclo de entrenamiento va progresando las cosas van a empezar a descrontrolarse de nuevo; Batch normalization es un método que se encargará de mitigar este problema, aplicando una normalización en las capas intermedias que pretende mantener los datos "normalizados" durante todo el proceso de aprendizaja.
 
-Con una capa de normalización introducimos cuatro parametros, dos _trainables_ el _beta_ y el _bias_, y dos que se calculan, _la std-dev_ y la _media.
+Con la _Batch Normalization_ efectivamente introducimos una nueva/nuevas capas intermedias que aplican una transformación sobre los datos. Cada una de estas capas introduce cuatro parametros, dos _trainables_ el _beta_ y el _bias_, y dos que se calculan, _la std-dev_ y la _media.
 
-La salida será 
+La salida de la capa de normalización será: 
 
 ```py
-z = _beta_ * x + bias_
+z = beta * x_norm + bias
 ```
 
 ```py
-x = x-media/sqrt(std-dev)
+x_norm = ( x - media ) / sqrt( std-dev )
 ```
 
-- _beta_ y _bias_ se aprenderán usando _backpropagation_.
-- _media_ y _std-dev_ se calculan durante el aprendizaje usando el estadístico de la media y de la desviación estandard.
+__beta__ y __bias__ se aprenden con backpropagation. __media__ y __std-dev__ se calculan como sigue:
 
+```py
+media = sum (x) / m
 
-Podemos definir la batch normalization en el modelo como una capa más:
+std-dev^2 = sum ( sqr ( x- media)) / m
+```
+
+Donde _m_ es el número de instancias.
+
+En Keras podemos definir la batch normalization en el modelo como una capa más:
 
 ```py
 model = keras.models.Sequential([
@@ -105,7 +135,7 @@ keras.layers.Dense(10, activation="softmax")
 ])
 ```
 
-La capa de batchnormalization introduce cuatro parámetros, pero solo dos de ellos, _gamma_ y _beta_ son entrenables. *moving_mean* y *moving_variance* se calculan:
+En el ejemplo anterior hemos incluido tres capas de normalización. Veamos como efectivamente la capa de batchnormalization introduce los cuatro parámetros que hemos indicado antes y que solo dos de ellos, _gamma_ y _beta_ son entrenables. *moving_mean* y *moving_variance* se calculan:
 
 ```py
 [(var.name, var.trainable) for var in model.layers[1].variables]
@@ -116,7 +146,7 @@ La capa de batchnormalization introduce cuatro parámetros, pero solo dos de ell
 ('batch_normalization_v2/moving_variance:0', False)]
 ```
 
-En muchas ocasiones se recomienda añadir la capa de normalización antes de la activación. Bastaría con no especificar el parámetro _activation_ en las capas, y especificar la activación como una capa más, *keras.layers.Activation*:
+En muchas __ocasiones se recomienda añadir la capa de normalización antes de la activación__. Bastaría con no especificar el parámetro _activation_ en las capas, y especificar la activación como una capa más, *keras.layers.Activation*:
 
 ```py
 model = keras.models.Sequential([
@@ -137,19 +167,20 @@ keras.layers.Dense(10, activation="softmax")
 ])
 ```
 
-La capa Batchnormalization tiene también algunos hiperparametros. Destacar *momentum*, que nos permite aplicar un momento sobre los valores que se calculan en la capa.
+La capa Batchnormalization tiene también algunos __hiperparametros__. Destacar *momentum*, que nos permite aplicar una inercia al aprendizaje de los parametros que se calculan en la capa.
 
 ### 1.3.1 Gradient Cliping
 
 Una forma de evitar el problema del *exploding gradient* es "caparle". Hay dos formas de hacerlo:
-- clipvalue. Lo que hacemos es capar las dimensiones del gradiente. Tiene el efecto de cambiar no solo el módulo del gradiente, más tambien su dirección
+
+- __clipvalue__. Lo que hacemos es capar las dimensiones del gradiente. Tiene el efecto de cambiar no solo el módulo del gradiente, sino tambien su dirección
 
 ```py
 optimizer = keras.optimizers.SGD(clipvalue=1.0)
 model.compile(loss="mse", optimizer=optimizer)
 ```
 
-- clipnorm. "Capa" la norma del gradiente al tiempo que mantiene su dirección
+- __clipnorm__. "Capa" la norma del gradiente al tiempo que mantiene su dirección
 
 ```py
 optimizer = keras.optimizers.SGD(clipnorm=1.0)
@@ -158,7 +189,9 @@ model.compile(loss="mse", optimizer=optimizer)
 
 ## 1.4 Learning Transfer
 
-Cargamos un modelo, *model_A*, y lo usamos para definir un modelo *model_B_on_A*
+_Muerto el perro se acabo la rabia_. Si evitamos tener que entrenar el modelo, los problemas de vanishing y exploding gradient desapareceran. ¿Como podemos lograr esto?, reusando un modelo que ya esta entrenado.
+
+Por ejemplo, en este caso estamos construyendo un modelo, *model_B_on_A*, pero lo haremos sobre un modelo previo, *model_A*:
 
 ```py
 model_A = keras.models.load_model("my_model_A.h5")
@@ -173,7 +206,7 @@ model_A_clone = keras.models.clone_model(model_A)
 model_A_clone.set_weights(model_A.get_weights())
 ```
 
-Durante el aprendizaje es habitual que se mantenga, al menos al principio, las capas que hemos *transferido* del modelo:
+__Durante el aprendizaje es habitual que se mantengan, al menos al principio, las capas que hemos *transferido* del modelo__:
 
 ```py
 for layer in model_B_on_A.layers[:-1]:
@@ -186,8 +219,10 @@ Por ejemplo, podemos entrenar el modelo manteniendo las capas *transferidas* con
 model_B_on_A.compile(loss="binary_crossentropy", optimizer="sgd",
 metrics=["accuracy"])
 
+#Hacemos 4 epochs de entrenamiento sin cambiar el modelo base
 history = model_B_on_A.fit(X_train_B, y_train_B, epochs=4, validation_data=(X_valid_B, y_valid_B))
 
+#Hacemos que las capas del modelo transferido, sean entrenables
 for layer in model_B_on_A.layers[:-1]:
     layer.trainable = True
 
@@ -202,8 +237,10 @@ validation_data=(X_valid_B, y_valid_B))
 Tipicamente el _Gradient Descent (GD)_ aprenderá los parámetros de la siguiente forma:
 
 ```
-par=par - lr * grad J(par)|par
+par = par - lr * grad J(par)|par
 ```
+
+Podemos aplicar diferentes técnicas a este algoritmo de forma que se mejore por un lado la velocidad de convergencia, y por otro lado la estabilidad.
 
 - __Momento__. Incluimos una inercia en el cambio de los parametros. La inercia se controla con el parámetro *beta*. Con *beta* igual a cero estamos en el GD estandard. Si el gradiente fuera constante, los parametros se cambiarían con una velocidad `1 / (1 - beta)`.
 
@@ -300,7 +337,7 @@ lr_scheduler = keras.callbacks.LearningRateScheduler(exponential_decay_fn)
 history = model.fit(X_train_scaled, y_train, [...], callbacks=[lr_scheduler])
 ```
 
-Otra forma de lograr lo mismo es usando un __custom callback__:
+- Otra forma de lograr lo mismo es usando un __custom callback__:
 
 ```py
 K = keras.backend
@@ -342,7 +379,7 @@ history = model.fit(X_train_scaled, y_train, epochs=n_epochs,
                     callbacks=[exp_decay])
 ```
 
-Cuando se graba un modelo, los parámetros, incluidos la _lr_, se guardan con él, de modo que cuando se cargue los datos del modelo, se retomará en el mismo estado en el que estaba cuando se guardó. Sin embargo, cuando usamos _epoch_, aquí tenemos un problema, porque _epoch_ se reseterará a cero cada vez que llamamos al método _fit()_. Una opción sería pasar el parámetro __initial_epoch__ cuando llamemos a _fit()_.
+__Cuando se graba un modelo__, los parámetros, incluidos la _lr_, se guardan con él, de modo que cuando se cargue los datos del modelo, se retomará en el mismo estado en el que estaba cuando se guardó. Sin embargo, cuando usamos _epoch_, aquí tenemos un problema, porque _epoch_ se reseterará a cero cada vez que llamamos al método _fit()_. Una opción sería pasar el parámetro __initial_epoch__ cuando llamemos a _fit()_.
 
 - __Picewise constant schedulling__. Con este enfoque tendríamos algo así como _lr0_ los primeros 5 epochs, _lr1_ los siguientes 50, etc.
 
@@ -462,7 +499,7 @@ keras.layers.Dense(10, activation="softmax")
 ])
 ```
 
-Indicar que en inferencia no se usara el Dropout. Esto significa que la DNN tiene que compensar por la falta "de intensidad". Por ejemplo, si en training el dropout rate era 50%, significa que a las salidas se activan con un 50% de las entradas, de media. Si en inferencia usaramos el modelo sin más, estaría recibiendo el donde de "intensidad", por eso hay que compensar en tiempo de inferencia, bien multiplicando los pesos por *1-p*, o dividiendo las salidas por *1-p*, donde *p* es la tasa de dropout - 0.5 en este ejemplo.
+Indicar que __en inferencia no se usara el Dropout__. Esto significa que la DNN tiene que compensar por la falta "de intensidad". Por ejemplo, si en training el dropout rate era 50%, significa que a las salidas se activan con un 50% de las entradas, de media. Si en inferencia usaramos el modelo sin más, estaría recibiendo el donde de "intensidad", por eso hay que compensar en tiempo de inferencia, bien multiplicando los pesos por *1-p*, o dividiendo las salidas por *1-p*, donde *p* es la tasa de dropout - 0.5 en este ejemplo.
 
 Cuando el modelo haga overfitting, __incrementaremos el dropout rate__, cuando haga underfittimg, __reduciremos el dropout rate__.
 
@@ -490,7 +527,9 @@ model = keras.models.Sequential([
 
 ### 4.2.2 Monte-Carlo (MC) Dropout
 
-Con esta técnica lo que vamos a hacer es aplicar dropout durante la inferencia, ejecutar la inferencia un número determinado de veces - 100 en el ejemplo que sigue -, y tomar el valor medio con resultado de la inferencia:
+Con esta técnica lo que vamos a hacer es __aplicar dropout durante la inferencia__, ejecutar la inferencia un número determinado de veces - 100 en el ejemplo que sigue -, y tomar el valor medio con resultado de la inferencia.
+
+Para forzar que el dropout se aplique durante la fase de inferencia incluimos `with keras.backend.learning_phase_scope(1):` en nuestro código:
 
 ```py
 with keras.backend.learning_phase_scope(1): # force training mode = dropout on
@@ -507,6 +546,8 @@ y_probas = np.stack([model(X_test_scaled, training=True)
 y_proba = y_probas.mean(axis=0)
 y_std = y_probas.std(axis=0)
 ```
+
+En este último caso hemos usado el parámetro `training=True` para indicar que el modelo se use en modo training, es decir, que aplique los _dropouts_.
 
 Si tomamos una de las respuestas:
 
@@ -527,7 +568,7 @@ array([[[0. , 0. , 0. , 0. , 0. , 0.14, 0. , 0.17, 0. , 0.68]],
 [...]
 ```
 
-La precisión del modelo es mayor cuando aplicamos Montecarlo.
+La __precisión del modelo es mayor cuando aplicamos Montecarlo__.
 
 ### 4.2.3 Emular Training
 
