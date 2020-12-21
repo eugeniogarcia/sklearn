@@ -251,3 +251,254 @@ model.compile(loss="mse", optimizer="nadam", metrics=[HuberMetric(2.0)])
 
 ### Capas custom
 
+Si necesitaramos crear una capa custom podemos hacerlo de dos formas. Si la capa no tiene pesos que tengan que aprenderse, no tiene estado, podemos definir una función y usarla con el wrapper `keras.layers.Lambda`:
+
+```py
+exponential_layer = keras.layers.Lambda(lambda x: tf.exp(x))
+```
+
+Si necesitamos pesos, habrá que heredar de `keras.layers.Layer`:
+
+```py
+class MyDense(keras.layers.Layer):
+    def __init__(self, units, activation=None, **kwargs):
+        super().__init__(**kwargs)
+        self.units = units
+        self.activation = keras.activations.get(activation)
+
+    def build(self, batch_input_shape):
+        self.kernel = self.add_weight(
+        name="kernel", shape=[batch_input_shape[-1], self.units], initializer="glorot_normal")
+        self.bias = self.add_weight(name="bias", shape=[self.units], initializer="zeros")
+        super().build(batch_input_shape) # must be at the end
+
+    def call(self, X):
+        return self.activation(X @ self.kernel + self.bias)
+
+    def compute_output_shape(self, batch_input_shape):
+        return tf.TensorShape(batch_input_shape.as_list()[:-1] + [self.units])
+    
+    def get_config(self):
+        base_config = super().get_config()
+        return {**base_config, "units": self.units, "activation": keras.activations.serialize(self.activation)}
+```
+
+- El constructor llama a. constructor base pasando los `**kwargs`. Guardamos los hiperparámetros
+- `build` se llama una sola vez, la primera vez que la capa sea utilizada. Creamos los pesos usando `add_weight`, y tenemos acceso a la shape del input. Al final se terminará llamando al método `build` base. Hay que hacerlo como último paso de la función
+- `call` se llama con cada uso que se haga de la capa.
+- `compute_output_shape` se utiliza cuando necesitemos saber la shape de la capa
+- `get_config` crea el diccionario de datos que se guardara con la capa cuando se guarde el modelo 
+
+Cuando queramos que la capa se comporte de forma diferente durante el training, usaremos el argumento `training` del método call:
+
+```py
+def call(self, X, training=None):
+    if training:
+        noise = tf.random.normal(tf.shape(X), stddev=self.stddev)
+        return X + noise
+    else:
+        return X
+```
+
+### Modelos custom
+
+Para crear un modelo custom heredamos de `keras.models.Model`:
+
+```py
+class ResidualRegressor(keras.models.Model):
+    def __init__(self, output_dim, **kwargs):
+        super().__init__(**kwargs)
+        self.hidden1 = keras.layers.Dense(30, activation="elu",kernel_initializer="he_normal")
+        self.block1 = ResidualBlock(2, 30)
+        self.block2 = ResidualBlock(2, 30)
+        self.out = keras.layers.Dense(output_dim)
+
+    def call(self, inputs):
+        Z = self.hidden1(inputs)
+        for _ in range(1 + 3):
+            Z = self.block1(Z)
+        Z = self.block2(Z)
+        return self.out(Z)
+```
+
+La clase Model es una clase hija de `keras.layers.Layer`, e incluye métodos como `compile()`, `fit()`, `evaluate()` y `predict()`.
+
+### Errores (losses) y métricas con datos "internos" del modelo
+
+Si queremos incluir entre los losses algun dato relativo al modelo, usaremos el método `self.add_loss`, como podemos ver aquí en el método `call`:
+
+```py
+class ReconstructingRegressor(keras.models.Model):
+    def __init__(self, output_dim, **kwargs):
+        super().__init__(**kwargs)
+        self.hidden = [keras.layers.Dense(30, activation="selu",kernel_initializer="lecun_normal") for _ in range(5)]
+        self.out = keras.layers.Dense(output_dim)
+
+    def build(self, batch_input_shape):
+        n_inputs = batch_input_shape[-1]
+        self.reconstruct = keras.layers.Dense(n_inputs)
+        super().build(batch_input_shape)
+    
+    def call(self, inputs):
+        Z = inputs
+        for layer in self.hidden:
+            Z = layer(Z)
+        reconstruction = self.reconstruct(Z)
+        recon_loss = tf.reduce_mean(tf.square(reconstruction - inputs))
+        self.add_loss(0.05 * recon_loss)
+        return self.out(Z)
+```
+
+## Cálculo del Gradiente
+
+Definimos una función:
+
+```py
+def f(w1, w2):
+    return 3 * w1 ** 2 + 2 * w1 * w2
+```
+
+Calculamos el gradiente
+
+```py
+w1, w2 = tf.Variable(5.), tf.Variable(3.)
+
+with tf.GradientTape() as tape:
+    z = f(w1, w2)
+
+gradients = tape.gradient(z, [w1, w2])
+```
+
+Tras calcular el gradiente, el contexto se elimina. Si queremos calcular el gradiente más de una vez tendremos que hacerlo persistente:
+
+```py
+with tf.GradientTape(persistent=True) as tape:
+    z = f(w1, w2)
+
+dz_dw1 = tape.gradient(z, w1) # => tensor 36.0
+dz_dw2 = tape.gradient(z, w2) # => tensor 10.0, works fine now!
+del tape
+```
+
+Para calcular el gradiente se tiene que derivar contra variables tensor flow. Si derivamos contra una constante obtendremos _None_ como resultado:
+
+```py
+c1, c2 = tf.constant(5.), tf.constant(3.)
+
+with tf.GradientTape() as tape:
+    z = f(c1, c2)
+
+gradients = tape.gradient(z, [c1, c2]) # returns [None, None]
+```
+
+Si queremos derivar contra un determinado tensor, tenemos que pedir a GradientTape que lo monitorice; Hacemos esto usando watch:
+
+```py
+with tf.GradientTape() as tape:
+    tape.watch(c1)
+    tape.watch(c2)
+    z = f(c1, c2)
+
+gradients = tape.gradient(z, [c1, c2]) # returns [tensor 36., tensor 10.]
+```
+
+En el ejemplo anterior hemos pedido a GradientTape que trate _c1_ y _c2_ como variables, de modo que podamos ver cual es el efecto de cambiar las constantes en la función.
+
+Podemos calcular __derivadas segundas__ anidando GradientTapes. La derivada primera la vamos a tener que usar varias veces, por este motivo tenemos que hacerla persistente:
+
+```py
+with tf.GradientTape(persistent=True) as hessian_tape:
+    with tf.GradientTape() as jacobian_tape:
+        z = f(w1, w2)
+    jacobians = jacobian_tape.gradient(z, [w1, w2])
+    
+hessians = [hessian_tape.gradient(jacobian, [w1, w2]) for jacobian in jacobians]
+
+del hessian_tape
+```
+
+__NOTA__: Tensorflow retornara _None_ cuando se use una función para la que no exista el gradiente, o se este derivando contra una variable independiente.
+
+### No propagar el gradiente
+
+Si no quisieramos trasladar el cálculo del gradiente a una parte de la función, podemos usar `tf.stop_gradient`:
+
+```py
+def f(w1, w2):
+    return 3 * w1 ** 2 + tf.stop_gradient(2 * w1 * w2)
+
+with tf.GradientTape() as tape:
+    z = f(w1, w2) # same result as without stop_gradient()
+
+gradients = tape.gradient(z, [w1, w2]) # => returns [tensor 30., None]
+```
+
+Vemos como la derivada parcial respecto a _w2_ retorna _None_. Esto es debido a que hemos indicado que no se apliquen las derivadas sobre la parte de la función que depende de _w2_.
+
+### Usar una derivada predenterminada
+
+GradientTape utiliza cálculo numérico para calcular las derivadas. Si la función tiene  asíntoticamente a un valor para determinados valores, el cálculo numerico puede resultar inestable y eventualmente dar _NaN_. Si sabemos cual es la derivada, podemos usarla. Basta con definir una función que retorne el valor normal y el gradiente, y que este anotada con `tf.custom_gradient`:
+
+```py
+#Anotación
+@tf.custom_gradient
+def my_better_softplus(z):
+    exp = tf.exp(z)
+    #Devolvemos una función que retorna dos valores, el valor normal, y la derivada
+    def my_softplus_gradients(grad):
+        return grad / (1 + 1 / exp)
+        return tf.math.log(exp + 1), my_softplus_gradients
+```
+
+### Custom fit
+
+Ver los comentarios sobre el código:
+
+```py
+n_epochs = 5
+batch_size = 32
+n_steps = len(X_train) // batch_size
+optimizer = keras.optimizers.Nadam(lr=0.01)
+loss_fn = keras.losses.mean_squared_error
+mean_loss = keras.metrics.Mean()
+metrics = [keras.metrics.MeanAbsoluteError()]
+```
+
+```py
+#El primer loop itera los epochs
+for epoch in range(1, n_epochs + 1):
+    print("Epoch {}/{}".format(epoch, n_epochs))
+    #Cada epoch tiene una serie de mini-batches
+    for step in range(1, n_steps + 1):
+        #Obtenemos los datos del mini-batch
+        X_batch, y_batch = random_batch(X_train_scaled, y_train)
+
+        #Calculamos el la función de error como la suma del error del modelo, y los errore
+        #de cada capa del modelo
+        with tf.GradientTape() as tape:
+            y_pred = model(X_batch, training=True)
+            main_loss = tf.reduce_mean(loss_fn(y_batch, y_pred))
+            loss = tf.add_n([main_loss] + model.losses)
+
+        #Calculamos el gradiente del error respecto a las variables
+        gradients = tape.gradient(loss, model.trainable_variables)
+
+        #Calcula los nuevos pesos usando el optimizador
+        optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+        
+        #Actualizamos el error del model
+        mean_loss(loss)
+        #Actualizamos las métricas tras adiestrar la epoch
+        for metric in metrics:
+            metric(y_batch, y_pred)
+
+        print_status_bar(step * batch_size, len(y_train), mean_loss, metrics)
+
+    print_status_bar(len(y_train), len(y_train), mean_loss, metrics)
+
+    for metric in [mean_loss] + metrics:
+        metric.reset_states()
+```
+
+## Funciones y gráficos
+
