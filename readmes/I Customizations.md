@@ -502,3 +502,25 @@ for epoch in range(1, n_epochs + 1):
 
 ## Funciones y gráficos
 
+En Tensorflow 2 podemos crear una función normal, y anotarla para que se cree el grafo. Una función "normal":
+
+```py
+def cube(x):
+    return x ** 3
+```
+
+```py
+tf_cube = tf.function(cube)
+```
+
+o
+
+```py
+@tf.function
+def tf_cube(x):
+    return x ** 3
+```
+
+Se crea un grafo para cada tipo/shape de entrada
+
+
