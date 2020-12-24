@@ -10,3 +10,7 @@ my_logs
 *.h5
 *.index
 *.data*
+*.tfrecord
+*.tfrecords
+*.idex
+__pycache__
