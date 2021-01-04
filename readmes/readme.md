@@ -1,3 +1,15 @@
 Hay algunos notebooks que no he resumido:
 - Capitulo 13. Hace referencia al uso de Datasets, como encadenar operaciones en un Datasets, como procesar los datos que se han guardado en multiples archivos, como usar TFRecord; Se describe también el protobuf custom que se define en tensorflow - que es el vehiculo ideal para convertir a binario
-- Cpitulo 14. CNN
+- Capitulo 14. CNNs. 
+    - Vemos como implementar un modelo con CNNs
+    - Usar un modelo ya pre-construido, as-is. Cargar el modelo, y preprorcesar los datos para poderlos usar con el modelo
+    - Usar un modelo ya pre-construido. Aprovechar las capas de un modelo pre-construido para sobre ellas, añadir nuestras capas custom
+    - Como definir capas custom que enlaten convinaciones repetitivas - ejemplo, convolución + pooling. Uso de partial como una forma de dar valores por defecto
+    - Como crear un modelo que clasifique una imagen, y __además__ la recuadre
+    - Identificar multiples objetos en una imagen 
+- Capítulos 15 y 16. RNNs
+    - Crear modelos sequence -> vector y sequence -> sequence
+    - Uso de RNN, LTSM, GRU
+    - Uso de convoluciónes 1D como forma de simplificar el tamaño de la sequencia que debe ser procesado
+    - Modelo para estimar el siguiente caracter de un texto
+    
