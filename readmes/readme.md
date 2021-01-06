@@ -14,3 +14,6 @@ Hay algunos notebooks que no he resumido:
     - Modelo para estimar el siguiente caracter de un texto
     - RNN con estado
     - Modelo para estimar el sentimiento transmitido por un comentario - de una película
+    - Transferencia de Embeddings para mejorar el comportamiento del modelo de sentimiento
+    - Encoder + Decoder para crear un modelo de traductor
+- Cápitulo 17. Autoencoders y GAN
