@@ -17,3 +17,12 @@ Hay algunos notebooks que no he resumido:
     - Transferencia de Embeddings para mejorar el comportamiento del modelo de sentimiento
     - Encoder + Decoder para crear un modelo de traductor
 - Cápitulo 17. Autoencoders y GAN
+    - Autoencoders
+        - Disminución de Dimensiones en datos
+        - Para mejorar la calidad de modelos supervisados en caso de que no haya suficientes datos etiquetados
+        - Entrenar un Autoencoder usando los mismos pesos en el Encoder y Decoder
+        - Entrenar un Autoencoder capa a capa
+        - Autoencoders con CNN
+        - Autoencoders con RNN
+        - Autoencoders como filtro de ruido en datos  
+
