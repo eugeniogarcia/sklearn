@@ -24,5 +24,9 @@ Hay algunos notebooks que no he resumido:
         - Entrenar un Autoencoder capa a capa
         - Autoencoders con CNN
         - Autoencoders con RNN
-        - Autoencoders como filtro de ruido en datos  
-
+        - Autoencoders como filtro de ruido en datos 
+        - Sparse Autoencoders. Buscamos mejorar la precisión del Autoencoder forzando a que la salida del Encoder sea más sparse
+        - Variational Autoencoders. La salida del Encoder en estos modelos es la media y la desviación estandar que pueden usarse para generar la entrada al Decoder siguiendo una distribución Normal. En este sentido podemos
+            - Usar el encoder una vez y generar diferentes entradas para el Decoder
+            - El modelo tiene un caríz de "generación", podemos "inventarnos" imagenes. Las GANs han desplazado a este tipo de modelos
+    -GAN 
