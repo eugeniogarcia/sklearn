@@ -22,21 +22,20 @@ fan-out = número de salidas de una capa
 fan-avg= ( fan-in + fan-out ) / 2
 ```
 
-Se ha comprobado empiricamente que la std-dev con la que inicializar los pesos conviene 
-
-Si la distribución usada para inicializar los pesos es normal de media 0, que la std-dev sea:
+Se ha comprobado empiricamente que la std-dev con la que inicializar los pesos es: 
+- Si la distribución usada para inicializar los pesos es normal de media 0, que la std-dev sea:
 
 ```
 std-dev ^2 = 1 / fan-avg
 ```
 
-Si la distribución usada para inicializar los pesos es uniforme, que el valor máximo este entre +r y -r, con:
+- Si la distribución usada para inicializar los pesos es uniforme, que el valor máximo este entre +r y -r, con:
 
 ```
 r = sqrt ( 3 / fan-avg )
 ```
 
-Esta forma de inicializar se denomina __Glorot__. Otras formas de inicialización de pesos son - indicamos ´la función de activación; Sobre la función de activació, ver la siguiente sección:
+Esta forma de inicializar se denomina __Glorot__. Otras formas de inicialización de pesos se indican en la siguiente tabla - indicamos tambien ´la función de activación:
 
 |Inicialización|Activación|std dev|
 |-------|-------|-------|

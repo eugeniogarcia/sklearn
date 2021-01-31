@@ -26,7 +26,7 @@ Podemos usar decission trees para clasificar datos. Para construir el árbol se 
 El gini se mide como:
 
 ```
-gini = 1 - suma ( prob_clase_i ) = 1 - suma ( num_inst_clase_i / num_tot_inst )
+gini = 1 - suma ( prob_clase_i^2 ) = 1 - suma ( (num_inst_clase_i / num_tot_inst)^2 )
 ```
 
 Cuando hacemos una división, el Gini resultante de la división se calcula como sigue:
